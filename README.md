@@ -1,6 +1,6 @@
 # GPU Atlas
 
-An independent reference to NVIDIA GPUs: full specifications for GeForce desktop and laptop, RTX PRO workstation, data-center, AI PC and edge products, with variants, side-by-side comparison and per-product sources.
+An independent reference to NVIDIA and AMD GPUs: full specifications for desktop and laptop graphics, workstation cards, data-center accelerators, AI PCs and edge modules, with variants, official launch prices by country, side-by-side comparison and per-product sources.
 
 Static site. No build step, no dependencies.
 
@@ -8,7 +8,8 @@ Static site. No build step, no dependencies.
 
 ```
 index.html          Page shell
-assets/data.js      The dataset (edit this to add or correct products)
+assets/data.js      NVIDIA dataset
+assets/data-amd.js  AMD dataset and launch prices by country
 assets/app.js       Database, spec-sheet, compare and reference views
 assets/styles.css   Styles (light and dark themes)
 ```
@@ -33,4 +34,4 @@ Each product in `assets/data.js` has an `id`, segment, series, architecture, sta
 
 ## Disclaimer
 
-Not affiliated with or endorsed by NVIDIA. NVIDIA, GeForce, RTX, CUDA, DGX and Jetson are trademarks of NVIDIA Corporation.
+Not affiliated with or endorsed by NVIDIA or AMD. Product names are trademarks of their respective owners.

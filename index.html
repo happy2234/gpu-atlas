@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GPU Atlas — NVIDIA GPU reference</title>
-  <meta name="description" content="An independent reference to NVIDIA GPUs: full specifications for GeForce, RTX PRO, data-center, AI PC and edge products, with variants, comparisons and sources.">
-  <meta property="og:title" content="GPU Atlas — NVIDIA GPU reference">
-  <meta property="og:description" content="Full specifications for every current and recent NVIDIA GPU, with variants, comparisons and sources.">
+  <title>GPU Atlas — NVIDIA & AMD GPU reference</title>
+  <meta name="description" content="An independent reference to NVIDIA and AMD GPUs: full specifications for desktop, laptop, workstation, data-center, AI PC and edge products, with variants, launch prices by country, comparisons and sources.">
+  <meta property="og:title" content="GPU Atlas — NVIDIA & AMD GPU reference">
+  <meta property="og:description" content="Full specifications for current and recent NVIDIA and AMD GPUs, with variants, prices by country, comparisons and sources.">
   <meta name="theme-color" content="#fafaf9">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233f6b0a'/%3E%3Cpath d='M8 22V10h6a5 5 0 0 1 0 10h-2' fill='none' stroke='%23fff' stroke-width='3'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,7 +17,7 @@
 <body>
   <header class="site-header">
     <div class="container">
-      <a class="brand" href="#database"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">GPU Atlas</span><span class="brand-sub">NVIDIA GPU reference</span></a>
+      <a class="brand" href="#database"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">GPU Atlas</span><span class="brand-sub">NVIDIA &amp; AMD GPU reference</span></a>
       <nav class="nav" aria-label="Main">
         <a href="#database" data-route="database">Database</a>
         <a href="#compare" data-route="compare">Compare</a>
@@ -25,6 +25,7 @@
         <a href="#glossary" data-route="glossary">Glossary</a>
         <a href="#methodology" data-route="methodology">Sources</a>
       </nav>
+      <select class="field country" id="country" aria-label="Country for prices"></select>
       <button class="icon-btn" id="themeBtn" type="button">Dark</button>
     </div>
   </header>
@@ -39,12 +40,13 @@
 
   <footer class="site-footer">
     <div class="container">
-      <span>GPU Atlas is an independent reference and is not affiliated with NVIDIA. NVIDIA, GeForce and RTX are trademarks of NVIDIA Corporation.</span>
+      <span>GPU Atlas is an independent reference and is not affiliated with NVIDIA or AMD. Product names are trademarks of their owners.</span>
       <span>Data updated <span id="year"></span> · <a href="#methodology">Methodology</a></span>
     </div>
   </footer>
 
   <script src="assets/data.js"></script>
+  <script src="assets/data-amd.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

@@ -15,6 +15,8 @@
   // ---------- state ----------
   const state = {
     seg: store.get("seg", "desktop"),
+    brand: store.get("brand", ""),
+    country: store.get("country", "US"),
     q: "",
     arch: "",
     status: "",
@@ -67,7 +69,16 @@
     if (s.powerRange) return esc(s.powerRange);
     return "—";
   }
-  const fmtPrice = (g) => (g.msrp ? `$${fmtInt(g.msrp)}` : "—");
+  const COUNTRY = (c) => D.COUNTRIES.find((x) => x.code === c) || D.COUNTRIES[0];
+  const SYM = { USD: "$", INR: "₹", GBP: "£", EUR: "€", JPY: "¥", CNY: "CN¥", AUD: "A$", CAD: "C$" };
+  function money(v, code) {
+    const c = COUNTRY(code);
+    const n = Number(v).toLocaleString(c.cur === "INR" ? "en-IN" : "en-US", { maximumFractionDigits: 0 });
+    return (SYM[c.cur] || c.cur + " ") + n;
+  }
+  const priceIn = (g, code) => (g.prices && g.prices[code] != null ? g.prices[code] : null);
+  const fmtPrice = (g, code) => { const v = priceIn(g, code || state.country); return v == null ? "—" : money(v, code || state.country); };
+  const cores = (g) => g.specs.cuda || g.specs.sp || null;
   const isNum = (v) => /^[\d$~≈<>.,]/.test(String(v).trim());
   const cls = (v) => (isNum(v) ? "num" : "txt");
   const badge = (st) => `<span class="badge ${esc(st)}">${esc(D.STATUS[st] || st)}</span>`;
@@ -80,7 +91,7 @@
       if (s.tensor == null) out.tensor = s.sm * PER_SM[g.arch];
       if (s.rt == null) out.rt = s.sm;
     }
-    if (g.seg === "desktop" && s.cuda && s.boost && s.fp32 == null) {
+    if (g.brand === "NVIDIA" && g.seg === "desktop" && s.cuda && s.boost && s.fp32 == null) {
       out.fp32 = Math.round((s.cuda * 2 * s.boost) / 1e5) / 10;
     }
     return out;
@@ -91,17 +102,18 @@
   const FIELDS = [
     ["GPU", [
       ["chip", "GPU / chip"], ["process", "Process"], ["transistors", "Transistors", (v) => typeof v === "number" ? `${v} billion` : v],
-      ["die", "Die size", (v) => `${v} mm²`], ["gpus", "Configuration"], ["sm", "Streaming multiprocessors"],
-      ["cuda", "CUDA cores", fmtInt], ["tensor", "Tensor Cores", fmtInt], ["rt", "RT cores", fmtInt], ["rops", "ROPs", fmtInt],
+      ["die", "Die size", (v) => `${v} mm²`], ["gpus", "Configuration"], ["sm", "Streaming multiprocessors"], ["cu", "Compute units"],
+      ["cuda", "CUDA cores", fmtInt], ["sp", "Stream processors", fmtInt], ["tensor", "Tensor Cores", fmtInt], ["rt", "RT cores", fmtInt],
+      ["rta", "Ray accelerators", fmtInt], ["aia", "AI accelerators", fmtInt], ["rops", "ROPs", fmtInt],
       ["base", "Base clock", (v) => `${fmtInt(v)} MHz`], ["boost", "Boost clock", (v) => `${fmtInt(v)} MHz`],
-      ["boostRange", "Boost clock range", (v) => `${v} MHz`], ["l2", "L2 cache", (v) => `${v} MB`], ["cpu", "CPU"]
+      ["boostRange", "Boost clock range", (v) => `${v} MHz`], ["l2", "L2 / last-level cache", (v) => `${v} MB`], ["ic", "Infinity Cache", (v) => `${v} MB`], ["cpu", "CPU"]
     ]],
     ["Memory", [
       ["mem", "Capacity", (v) => typeof v === "number" ? (v >= 1000 ? `${(v / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} TB` : `${v} GB`) : v],
       ["memType", "Type"], ["bus", "Bus width", (v) => `${v}-bit`], ["speed", "Data rate", (v) => `${v} Gbps`], ["bw", "Bandwidth", fmtBw]
     ]],
     ["Performance", [
-      ["fp32", "FP32 (shader)", (v) => `${v} TFLOPS`], ["ai", "AI TOPS", fmtInt], ["fp4", "FP4"], ["fp8", "FP8"], ["fp16", "FP16 / BF16"], ["fp64", "FP64"]
+      ["fp32", "FP32 (shader)", (v) => `${v} TFLOPS`], ["ai", "AI TOPS (vendor figure)", fmtInt], ["fp4", "FP4"], ["fp8", "FP8"], ["fp16", "FP16 / BF16"], ["fp64", "FP64"]
     ]],
     ["Board & platform", [
       ["power", "Power", (v) => typeof v === "number" ? `${fmtInt(v)} W` : v], ["powerRange", "Power range"], ["connector", "Power connector"],
@@ -115,10 +127,10 @@
 
   // ---------- table columns ----------
   const COL = {
-    model: { h: "Model", sort: (g) => g.name, cell: (g) => `<a class="model-link" href="#${g.id}">${esc(g.name)}</a>${g.status === "rumored" || g.status === "roadmap" || g.status === "announced" ? " " + badge(g.status) : ""}<div class="sub">${esc(g.series)}</div>` },
+    model: { h: "Model", sort: (g) => g.name, cell: (g) => `<a class="model-link" href="#${g.id}">${esc(g.name)}</a>${g.status === "rumored" || g.status === "roadmap" || g.status === "announced" ? " " + badge(g.status) : ""}<div class="sub"><span class="brand-tag ${g.brand.toLowerCase()}">${esc(g.brand)}</span> ${esc(g.series)}</div>` },
     seg: { h: "Segment", sort: (g) => D.SEGMENTS[g.seg], cell: (g) => esc(D.SEGMENTS[g.seg]) },
     arch: { h: "Architecture", sort: (g) => g.arch, cell: (g) => `${esc(g.arch)}${g.specs.chip && g.specs.chip !== "—" ? `<div class="sub">${esc(g.specs.chip)}</div>` : ""}` },
-    cuda: { h: "CUDA cores", n: 1, sort: (g) => g.specs.cuda || -1, cell: (g) => (g.specs.cuda ? fmtInt(g.specs.cuda) : "—") },
+    cuda: { h: "Shader cores", n: 1, sort: (g) => cores(g) || -1, cell: (g) => (cores(g) ? `${fmtInt(cores(g))}<div class="sub">${g.specs.cuda ? "CUDA" : "Stream proc."}</div>` : "—") },
     mem: { h: "Memory", n: 1, sort: (g) => (typeof g.specs.mem === "number" ? g.specs.mem : -1), cell: (g) => `${fmtMem(g)}${typeof g.specs.mem === "number" && g.specs.memType ? `<div class="sub">${esc(g.specs.memType.split(" (")[0])}</div>` : ""}` },
     bw: { h: "Bandwidth", n: 1, sort: (g) => g.specs.bw || -1, cell: (g) => fmtBw(g.specs.bw) },
     power: { h: "Power", n: 1, w: 1, sort: (g) => (typeof g.specs.power === "number" ? g.specs.power : parseInt(String(g.specs.power || g.specs.powerRange || "").replace(/[^\d–-].*$/, "").split(/[–-]/).pop()) || -1), cell: (g) => fmtPower(g.specs) },
@@ -126,20 +138,20 @@
     fp4: { h: "FP4", w: 1, sort: (g) => g.specs.fp4 || "", cell: (g) => esc(g.specs.fp4 ? g.specs.fp4.split(" · ")[0] : "—") },
     cpu: { h: "CPU", w: 1, sort: (g) => g.specs.cpu || "", cell: (g) => esc(g.specs.cpu || "—") },
     launch: { h: "Launch", n: 1, sort: (g) => dateKey(g.launch), cell: (g) => esc(fmtDate(g.launch)) },
-    price: { h: "Launch price", n: 1, sort: (g) => g.msrp || -1, cell: (g) => fmtPrice(g) }
+    price: { h: "Launch price", n: 1, sort: (g) => priceIn(g, state.country) || -1, cell: (g) => fmtPrice(g) }
   };
   const SEG_COLS = {
-    all: ["model", "seg", "arch", "mem", "bw", "power", "launch"],
+    all: ["model", "seg", "arch", "mem", "bw", "power", "launch", "price"],
     desktop: ["model", "arch", "cuda", "mem", "bw", "power", "ai", "launch", "price"],
-    laptop: ["model", "arch", "cuda", "mem", "bw", "power", "ai", "launch"],
-    pro: ["model", "arch", "cuda", "mem", "bw", "power", "launch"],
+    laptop: ["model", "arch", "cuda", "mem", "bw", "power", "launch"],
+    pro: ["model", "arch", "cuda", "mem", "bw", "power", "launch", "price"],
     datacenter: ["model", "arch", "mem", "bw", "fp4", "power", "launch"],
     systems: ["model", "arch", "cpu", "mem", "fp4", "launch", "price"],
     edge: ["model", "arch", "cpu", "mem", "power", "launch", "price"]
   };
 
   // ---------- views ----------
-  function setTitle(t) { document.title = t ? `${t} — GPU Atlas` : "GPU Atlas — NVIDIA GPU reference"; }
+  function setTitle(t) { document.title = t ? `${t} — GPU Atlas` : "GPU Atlas — NVIDIA & AMD GPU reference"; }
   function setNav(name) {
     document.querySelectorAll(".nav a").forEach((a) => {
       if (a.dataset.route === name) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
@@ -155,32 +167,38 @@
     app.innerHTML = `
       <div class="page-head">
         <p class="eyebrow">Reference</p>
-        <h1>NVIDIA GPU database</h1>
-        <p class="lead">Specifications for every current and recent NVIDIA GPU and accelerator: GeForce desktop and laptop, RTX PRO workstation, data-center, AI PCs and edge modules. Each model has its own spec sheet with variants and sources.</p>
+        <h1>GPU database</h1>
+        <p class="lead">Specifications for current and recent NVIDIA and AMD GPUs and accelerators: desktop and laptop graphics, workstation cards, data-center accelerators, AI PCs and edge modules. Each model has its own spec sheet with variants, launch prices by country and sources.</p>
         <div class="meta"><span>${LIST.length} products and configurations</span><span>Updated ${esc(D.updated)}</span><a href="#methodology">How this data is compiled</a></div>
       </div>
       <div class="devs">
         <a class="dev" href="#rtx-spark-n1x"><time>16 Oct 2026</time><p><strong>RTX Spark laptops ship.</strong> NVIDIA's first CPU-and-GPU chip for Windows PCs.</p></a>
         <a class="dev" href="#vera-rubin-nvl72"><time>H2 2026</time><p><strong>Vera Rubin in production.</strong> 288 GB HBM4 at 22 TB/s per GPU.</p></a>
-        <a class="dev" href="#rtx-pro-5500"><time>Sep 2026</time><p><strong>RTX PRO 5500 announced.</strong> 21,760 cores and 84 GB on a 416-bit bus.</p></a>
+        <a class="dev" href="#mi450x"><time>12 Nov 2026</time><p><strong>AMD Instinct MI450X announced.</strong> A 288 GB HBM4 option for Helios racks.</p></a>
       </div>
       <div class="tabs" role="tablist">
         ${["desktop", "laptop", "pro", "datacenter", "systems", "edge", "all"].map((k) => `<button class="tab" role="tab" data-seg="${k}" aria-selected="${state.seg === k}">${k === "all" ? "All" : esc(D.SEGMENTS[k])}<span class="count">${counts[k]}</span></button>`).join("")}
       </div>
       <div class="toolbar">
         <input class="field search" type="search" id="q" placeholder="Search models, chips, series" value="${esc(state.q)}" aria-label="Search">
+        <div class="seg-ctl" role="group" aria-label="Brand">${["", "NVIDIA", "AMD"].map((b) => `<button class="seg-btn" data-brand="${b}" aria-pressed="${state.brand === b}">${b || "All brands"}</button>`).join("")}</div>
         <select class="field" id="arch" aria-label="Architecture"><option value="">All architectures</option>${archs.map((a) => `<option ${state.arch === a ? "selected" : ""}>${esc(a)}</option>`).join("")}</select>
         <select class="field" id="status" aria-label="Status"><option value="">Any status</option>${Object.entries(D.STATUS).map(([k, v]) => `<option value="${k}" ${state.status === k ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
         <span class="spacer"></span>
         <span class="result-count" id="count"></span>
       </div>
       <div class="table-wrap"><table class="data" id="tbl"></table></div>
-      <p class="sub" style="margin-top:12px">Launch prices are US launch MSRPs. Retail prices for RTX 50 cards rose sharply through 2026 because of the memory shortage. AI TOPS are NVIDIA's figures and are not comparable across generations.</p>
+      <p class="sub" style="margin-top:12px">Launch prices are the official prices NVIDIA or AMD published for the selected country (change it at the top of the page). A dash means no official price was published there. Retail prices rose sharply through 2026 because of the memory shortage. AI TOPS are vendor figures and are not comparable across brands or generations.</p>
     `;
 
     app.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
       state.seg = b.dataset.seg; state.sortKey = null; store.set("seg", state.seg);
       app.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", x === b));
+      renderTable();
+    }));
+    app.querySelectorAll(".seg-btn").forEach((b) => b.addEventListener("click", () => {
+      state.brand = b.dataset.brand; store.set("brand", state.brand);
+      app.querySelectorAll(".seg-btn").forEach((x) => x.setAttribute("aria-pressed", x === b));
       renderTable();
     }));
     app.querySelector("#q").addEventListener("input", (e) => { state.q = e.target.value; renderTable(); });
@@ -194,9 +212,10 @@
     const q = state.q.trim().toLowerCase();
     let rows = LIST.filter((g) =>
       (state.seg === "all" || g.seg === state.seg) &&
+      (!state.brand || g.brand === state.brand) &&
       (!state.arch || g.arch === state.arch) &&
       (!state.status || g.status === state.status) &&
-      (!q || [g.name, g.series, g.arch, g.specs.chip, g.id, (g.variants || []).map((v) => v.name).join(" ")].join(" ").toLowerCase().includes(q))
+      (!q || [g.name, g.brand, g.series, g.arch, g.specs.chip, g.id, (g.variants || []).map((v) => v.name).join(" ")].join(" ").toLowerCase().includes(q))
     );
     if (state.sortKey) {
       const f = COL[state.sortKey].sort;
@@ -211,7 +230,7 @@
     tbl.innerHTML = `
       <thead><tr>${cols.map((c) => {
         const sorted = state.sortKey === c;
-        return `<th class="${COL[c].n ? "n" : ""}" ${sorted ? `aria-sort="${state.sortDir > 0 ? "ascending" : "descending"}"` : ""}><button data-sort="${c}">${esc(COL[c].h)}${sorted ? (state.sortDir > 0 ? " ↑" : " ↓") : ""}</button></th>`;
+        return `<th class="${COL[c].n ? "n" : ""}" ${sorted ? `aria-sort="${state.sortDir > 0 ? "ascending" : "descending"}"` : ""}><button data-sort="${c}">${esc(c === "price" ? `Launch price (${COUNTRY(state.country).cur})` : COL[c].h)}${sorted ? (state.sortDir > 0 ? " ↑" : " ↓") : ""}</button></th>`;
       }).join("")}</tr></thead>
       <tbody>${rows.length ? rows.map((g) => `<tr data-id="${g.id}">${cols.map((c) => `<td class="${COL[c].n ? "n" : ""} ${COL[c].w ? "w" : ""}">${COL[c].cell(g)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${cols.length}" class="empty">No products match these filters.</td></tr>`}</tbody>`;
     document.getElementById("count").textContent = `${rows.length} ${rows.length === 1 ? "result" : "results"}`;
@@ -230,6 +249,7 @@
     const s = g.specs, d = derived(g), out = [];
     const push = (k, v, u) => v != null && v !== "" && out.length < 4 && out.push({ k, v, u });
     if (s.cuda) push("CUDA cores", fmtInt(s.cuda));
+    else if (s.sp) push("Stream processors", fmtInt(s.sp));
     if (s.mem != null) {
       if (typeof s.mem === "number") push("Memory", s.mem >= 1000 ? (s.mem / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 }) : s.mem, `${s.mem >= 1000 ? "TB" : "GB"} ${s.memType ? s.memType.split(" ")[0] : ""}`);
       else push("Memory", s.mem);
@@ -257,8 +277,14 @@
     const overview = [
       ["Segment", D.SEGMENTS[g.seg]], ["Series", g.series], ["Architecture", g.arch],
       ["Status", D.STATUS[g.status]], ["Launch", fmtDate(g.launch)],
-      ["Launch price", (g.msrp ? `$${fmtInt(g.msrp)}` : "—") + (g.priceNote ? `<span class="note">${esc(g.priceNote)}</span>` : "")]
+      ["Brand", g.brand],
+      ["Launch price (US)", (g.msrp ? money(g.msrp, "US") : "—") + (g.priceNote ? `<span class="note">${esc(g.priceNote)}</span>` : "")]
     ];
+    const anyRegional = g.prices && Object.keys(g.prices).length;
+    const regional = anyRegional ? `<section class="spec-group"><h3>Launch price by country</h3><dl class="specs">${D.COUNTRIES.map((c) => {
+      const v = priceIn(g, c.code);
+      return `<dt>${c.code === state.country ? `<b>${esc(c.name)}</b>` : esc(c.name)}</dt><dd class="${v == null ? "txt dim" : "num"}">${v == null ? "Not published" : esc(money(v, c.code))}</dd>`;
+    }).join("")}</dl>${g.regionNote ? `<p class="sub" style="margin-top:8px">${esc(g.regionNote)}</p>` : ""}</section>` : "";
 
     const groups = FIELDS.map(([title, fields]) => {
       const rows = fields.filter(([k]) => specVal(g, k) != null && specVal(g, k) !== "").map(([k, l]) => {
@@ -275,9 +301,9 @@
       <nav class="crumbs" aria-label="Breadcrumb"><a href="#database">Database</a> / <a href="#database" data-seg="${g.seg}">${esc(D.SEGMENTS[g.seg])}</a> / ${esc(g.series)}</nav>
       <div class="detail-head">
         <div>
-          <p class="eyebrow">${esc(D.SEGMENTS[g.seg])} · ${esc(g.arch)}</p>
+          <p class="eyebrow">${esc(g.brand)} · ${esc(D.SEGMENTS[g.seg])} · ${esc(g.arch)}</p>
           <h1>${esc(g.name)}</h1>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${badge(g.status)}<span class="sub">${esc(fmtDate(g.launch))}${g.msrp ? ` · $${fmtInt(g.msrp)} at launch` : ""}</span></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${badge(g.status)}<span class="sub">${esc(fmtDate(g.launch))}${priceIn(g, state.country) != null ? ` · ${esc(fmtPrice(g))} at launch (${esc(COUNTRY(state.country).name)})` : g.msrp ? ` · ${esc(money(g.msrp, "US"))} at launch (US)` : ""}</span></div>
         </div>
         <div class="actions">
           <button class="btn ${inCmp ? "" : "primary"}" id="cmpBtn" ${!inCmp && state.compare.length >= 4 ? "disabled" : ""}>${inCmp ? "Remove from compare" : "Add to compare"}</button>
@@ -289,7 +315,8 @@
       ${keyStats(g).length ? `<div class="keystats">${keyStats(g).map((x) => `<div class="keystat"><div class="k">${esc(x.k)}</div><div class="v">${esc(x.v)}${x.u ? `<small>${esc(x.u)}</small>` : ""}</div></div>`).join("")}</div>` : ""}
       <div class="detail-grid">
         <div>
-          <section class="spec-group"><h3>Overview</h3><dl class="specs">${overview.map(([k, v]) => `<dt>${esc(k)}</dt><dd class="${["Launch", "Launch price"].includes(k) ? "num" : "txt"}">${k === "Launch price" ? v : esc(v)}</dd>`).join("")}</dl></section>
+          <section class="spec-group"><h3>Overview</h3><dl class="specs">${overview.map(([k, v]) => `<dt>${esc(k)}</dt><dd class="${["Launch", "Launch price (US)"].includes(k) ? "num" : "txt"}">${k === "Launch price (US)" ? v : esc(v)}</dd>`).join("")}</dl></section>
+          ${regional}
           ${groups}
           ${g.variants && g.variants.length ? `<section class="spec-group"><h3>Variants &amp; versions</h3>${g.variants.map((v) => `<div class="variant"><b>${esc(v.name)}</b><span>${esc(v.diff)}</span></div>`).join("")}</section>` : ""}
         </div>
@@ -324,7 +351,7 @@
     t.querySelector("#trayClear").addEventListener("click", () => { state.compare = []; store.set("compare", []); renderTray(); route(); });
   }
 
-  const HIGHER_BETTER = new Set(["cuda", "tensor", "rt", "rops", "boost", "l2", "mem", "bw", "ai", "fp32", "sm"]);
+  const HIGHER_BETTER = new Set(["cuda", "sp", "cu", "tensor", "rt", "rops", "boost", "l2", "ic", "mem", "bw", "ai", "fp32", "sm"]);
 
   function viewCompare() {
     setTitle("Compare"); setNav("compare");
@@ -335,7 +362,7 @@
     if (picks.length) {
       const head = `<thead><tr><th></th>${picks.map((g) => `<th><a class="model-link" href="#${g.id}">${esc(g.name)}</a><div class="sub">${esc(D.SEGMENTS[g.seg])}</div></th>`).join("")}</tr></thead>`;
       let body = `<tr class="group"><th colspan="${picks.length + 1}">Overview</th></tr>`;
-      body += [["Architecture", (g) => g.arch], ["Status", (g) => D.STATUS[g.status]], ["Launch", (g) => fmtDate(g.launch)], ["Launch price", (g) => fmtPrice(g)]]
+      body += [["Brand", (g) => g.brand], ["Architecture", (g) => g.arch], ["Status", (g) => D.STATUS[g.status]], ["Launch", (g) => fmtDate(g.launch)], [`Launch price (${COUNTRY(state.country).name})`, (g) => fmtPrice(g)]]
         .map(([l, f]) => `<tr><th>${esc(l)}</th>${picks.map((g) => `<td class="${cls(f(g))}">${f(g)}</td>`).join("")}</tr>`).join("");
       FIELDS.forEach(([title, fields]) => {
         const rows = fields.filter(([k]) => picks.some((g) => specVal(g, k) != null));
@@ -351,7 +378,7 @@
           body += `<tr><th>${esc(l)}</th>${vals.map((v) => `<td class="${v == null ? "" : cls(fmtField(k, v))} ${best != null && v === best ? "best" : ""}">${v == null ? '<span class="dim">—</span>' : esc(fmtField(k, v))}</td>`).join("")}</tr>`;
         });
       });
-      table = `<div class="table-wrap"><table class="cmp">${head}<tbody>${body}</tbody></table></div><p class="sub" style="margin-top:10px">Highlighted values are the highest in each row. Core counts and AI TOPS are only directly comparable within the same architecture.</p>`;
+      table = `<div class="table-wrap"><table class="cmp">${head}<tbody>${body}</tbody></table></div><p class="sub" style="margin-top:10px">Highlighted values are the highest in each row. Core counts and AI TOPS are only directly comparable within the same brand and architecture: NVIDIA CUDA cores and AMD stream processors are not equivalent.</p>`;
     }
 
     app.innerHTML = `
@@ -372,11 +399,11 @@
   function viewArchitectures() {
     setTitle("Architectures"); setNav("architectures");
     app.innerHTML = `
-      <div class="page-head"><p class="eyebrow">Background</p><h1>Architectures</h1><p class="lead">Each NVIDIA generation is named after a scientist. One architecture usually spans gaming, workstation and data-center products, though since 2022 data-center and consumer designs have sometimes diverged.</p></div>
-      <div class="table-wrap"><table class="data cols-table"><thead><tr><th>Architecture</th><th>Year</th><th>Process</th><th>Named after</th><th>Key changes</th><th>Products</th><th class="n">In database</th></tr></thead>
-      <tbody>${D.ARCHS.slice().reverse().map((a) => {
+      <div class="page-head"><p class="eyebrow">Background</p><h1>Architectures</h1><p class="lead">NVIDIA names each generation after a scientist and uses one family for gaming, workstation and data-center products. AMD splits its designs: RDNA for graphics and CDNA for data-center compute.</p></div>
+      <div class="table-wrap"><table class="data cols-table"><thead><tr><th>Architecture</th><th>Brand</th><th>Year</th><th>Process</th><th>Named after</th><th>Key changes</th><th>Products</th><th class="n">In database</th></tr></thead>
+      <tbody>${D.ARCHS.slice().sort((x, y) => parseInt(y.year) - parseInt(x.year)).map((a) => {
         const n = LIST.filter((g) => g.arch === a.name || (a.name === "Blackwell" && g.arch === "Grace Blackwell") || (a.name === "Blackwell" && g.arch === "Blackwell Ultra")).length;
-        return `<tr style="cursor:default"><td><b>${esc(a.name)}</b></td><td class="mono">${esc(a.year)}</td><td>${esc(a.process)}</td><td>${esc(a.namesake)}</td><td style="white-space:normal;min-width:260px">${esc(a.key)}</td><td style="white-space:normal;min-width:220px" class="dim">${esc(a.products)}</td><td class="n">${n}</td></tr>`;
+        return `<tr style="cursor:default"><td><b>${esc(a.name)}</b></td><td><span class="brand-tag ${a.brand.toLowerCase()}">${esc(a.brand)}</span></td><td class="mono">${esc(a.year)}</td><td>${esc(a.process)}</td><td>${esc(a.namesake)}</td><td style="white-space:normal;min-width:260px">${esc(a.key)}</td><td style="white-space:normal;min-width:220px" class="dim">${esc(a.products)}</td><td class="n">${n}</td></tr>`;
       }).join("")}</tbody></table></div>`;
   }
 
@@ -393,11 +420,12 @@
     app.innerHTML = `
       <div class="page-head"><p class="eyebrow">About</p><h1>Methodology &amp; sources</h1></div>
       <div class="prose">
-        <p>GPU Atlas is an independent reference. It is not affiliated with or endorsed by NVIDIA. NVIDIA, GeForce, RTX, CUDA, DGX, Jetson and related names are trademarks of NVIDIA Corporation.</p>
+        <p>GPU Atlas is an independent reference. It is not affiliated with or endorsed by NVIDIA or AMD. NVIDIA, GeForce, RTX, CUDA, DGX and Jetson are trademarks of NVIDIA Corporation. AMD, Radeon, Ryzen, Instinct, RDNA and CDNA are trademarks of Advanced Micro Devices, Inc.</p>
         <h2>What the numbers mean</h2>
         <ul>
           <li><b>Specifications</b> are NVIDIA's reference values at launch. Partner (AIB) cards often ship with higher clocks and power limits.</li>
-          <li><b>Launch price</b> is the US MSRP at launch. Retail prices for RTX 50 cards rose sharply in 2026 because of the global memory shortage: Newegg medians rose as much as 39% between June and August 2026, and some RTX 5090 listings passed $5,000.</li>
+          <li><b>Launch prices by country</b> are the official prices NVIDIA or AMD announced for that market at launch, in local currency and usually including local sales tax. Where no official price was published, the site shows a dash rather than a currency conversion. Regional prices are currently collected for the latest generation; older products show the US price only.</li>
+          <li><b>US launch price</b> is the US MSRP at launch, before sales tax. Retail prices for RTX 50 cards rose sharply in 2026 because of the global memory shortage: Newegg medians rose as much as 39% between June and August 2026, and some RTX 5090 listings passed $5,000.</li>
           <li><b>Calculated values</b> are labelled on each spec sheet. FP32 TFLOPS for GeForce desktop cards is CUDA cores × 2 × boost clock. Tensor and RT core counts for GeForce and RTX PRO are derived from the SM count where NVIDIA did not list them.</li>
           <li><b>AI TOPS</b> use different precisions by generation (FP4 with sparsity for RTX 50, FP8 with sparsity for RTX 40). They are not comparable across generations.</li>
           <li><b>Status:</b> <i>Current</i> is on sale now; <i>Announced</i> is announced but not yet broadly available; <i>Roadmap</i> is disclosed by NVIDIA for a future year; <i>Unconfirmed</i> is reported in the press but not announced by NVIDIA.</li>
@@ -437,6 +465,9 @@
   applyTheme(theme);
   themeBtn.addEventListener("click", () => { theme = theme === "dark" ? "light" : "dark"; store.set("theme", theme); applyTheme(theme); });
 
+  const csel = document.getElementById("country");
+  csel.innerHTML = D.COUNTRIES.map((c) => `<option value="${c.code}" ${c.code === state.country ? "selected" : ""}>${c.cur} · ${esc(c.name)}</option>`).join("");
+  csel.addEventListener("change", () => { state.country = csel.value; store.set("country", state.country); route(); });
   document.getElementById("year").textContent = D.updated;
   route();
 })();
