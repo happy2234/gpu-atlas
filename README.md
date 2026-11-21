@@ -1,37 +1,54 @@
 # GPU Atlas
 
-An independent reference to NVIDIA and AMD GPUs: full specifications for desktop and laptop graphics, workstation cards, data-center accelerators, AI PCs and edge modules, with variants, official launch prices by country, side-by-side comparison and per-product sources.
+An independent reference to NVIDIA, AMD and Intel GPUs: full spec sheets for desktop and laptop graphics, workstation cards, data-center accelerators, AI PCs and edge modules, with variants, official launch prices by country, dated street-price snapshots, side-by-side comparison and per-product sources.
 
-Static site. No build step, no dependencies.
+Live site: https://happy2234.github.io/gpu-atlas/
+
+## How it works
+
+The data lives in plain JavaScript files. A small build script turns it into a static site:
+
+- `/` — searchable database with brand, architecture, status, price and memory filters, plus compare
+- `/gpu/<id>/` — one real page per product, with its own title, description, social preview image and structured data
+- `/guides/` — guides generated from the data
+- `/sitemap.xml`, `/robots.txt`
+
+GitHub Actions runs the build and deploys to GitHub Pages on every push to `main`.
 
 ## Structure
 
 ```
-index.html          Page shell
-assets/data.js      NVIDIA dataset
-assets/data-amd.js  AMD dataset and launch prices by country
-assets/app.js       Database, spec-sheet, compare and reference views
-assets/styles.css   Styles (light and dark themes)
+index.html              Database / compare app shell
+assets/data.js          NVIDIA products
+assets/data-amd.js      AMD products and official launch prices by country
+assets/data-meta.js     Corrections, Intel Arc, extra prices, street-price snapshots, "last checked" dates
+assets/shared.js        Spec fields and formatting shared by the app and the build
+assets/app.js           Database, compare and reference views
+assets/styles.css       Styles (light and dark)
+scripts/build.cjs       Static page, guide, image and sitemap generator
+scripts/fonts/          Fonts used to render preview images
 ```
 
-## Run locally
-
-Open `index.html` in a browser, or serve the folder:
+## Build locally
 
 ```
-python3 -m http.server 8000
+npm install
+node scripts/build.cjs          # writes dist/
+cd dist && python3 -m http.server 8000
 ```
 
-## Deploy on GitHub Pages
-
-1. Push these files to the root of a public repository.
-2. Settings → Pages → Source: *Deploy from a branch* → `main` / `/ (root)`.
-3. The site is published at `https://<username>.github.io/<repository>/`.
+Options: `SITE_URL` (canonical/sitemap base), `LINK_SUFFIX=index.html` (for hosts without directory indexes), `SKIP_IMAGES=1`, `OUT_DIR`.
 
 ## Editing data
 
-Each product in `assets/data.js` has an `id`, segment, series, architecture, status, launch date, launch price, `specs`, optional `variants` and a list of `sources` keys. Leave a value out rather than guessing; the spec sheet hides empty fields.
+- Add or fix a product in the relevant data file. Leave values out rather than guessing; empty fields are hidden.
+- Official regional launch prices go in `prices` (local currency). Street prices go in `street` with a date and a source key — they are snapshots, so update or remove them when they go stale.
+- When you verify a product's specs against an official page, set `checked` to the date and add the source.
+
+## Search engines
+
+GitHub Pages serves this project under `/gpu-atlas/`, so search engines will not read `robots.txt` from here. Submit `https://happy2234.github.io/gpu-atlas/sitemap.xml` in Google Search Console and Bing Webmaster Tools instead.
 
 ## Disclaimer
 
-Not affiliated with or endorsed by NVIDIA or AMD. Product names are trademarks of their respective owners.
+Not affiliated with or endorsed by NVIDIA, AMD or Intel. Product names are trademarks of their respective owners.

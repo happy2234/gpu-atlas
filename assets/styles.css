@@ -141,6 +141,28 @@ h3 { font-size: 15px; margin: 0 0 10px; font-weight: 650; }
 [data-theme="dark"] .brand-tag.nvidia { color: #9ccb5c; background: #1d2614; }
 [data-theme="dark"] .brand-tag.amd { color: #f08a8d; background: #2c1617; }
 
+/* Budget filter */
+.budget { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.budget .cur { color: var(--text-2); }
+.budget input { width: 110px; }
+.brand-tag.intel { color: #0b5ca8; background: #e6f0fa; }
+[data-theme="dark"] .brand-tag.intel { color: #8cc1f0; background: #142233; }
+
+/* Static spec pages */
+.checked { font-size: 13px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.checked .ok { color: var(--accent); }
+.checked .warn { color: var(--warn); }
+.street { width: 100%; border-collapse: collapse; font-size: 14px; }
+.street th, .street td { text-align: left; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.street th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.street td.num { font-family: var(--mono); font-size: 13.5px; }
+.up { color: var(--warn); font-family: var(--mono); font-size: 12.5px; }
+.guide-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.guide-list a { display: block; background: var(--surface); padding: 16px 18px; text-decoration: none; }
+.guide-list a:hover { background: var(--surface-2); }
+.guide-list b { display: block; font-weight: 600; }
+.guide-list span { font-size: 14px; color: var(--text-2); }
+
 /* Table */
 .table-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; background: var(--surface); box-shadow: var(--shadow); }
 table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -254,11 +276,22 @@ table.cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
 .prose h2 { margin-top: 36px; }
 .cols-table th { width: auto; }
 
+/* Crawlable index of all spec sheets (home page) */
+.all-index { padding-bottom: 32px; font-size: 13px; color: var(--muted); }
+.all-index h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+.all-index h3 { font-size: 13px; margin: 14px 0 4px; color: var(--text-2); }
+.all-index p { margin: 0; line-height: 1.9; }
+.all-index a { color: var(--text-2); text-decoration: none; }
+.all-index a:hover { color: var(--text); text-decoration: underline; }
+
 /* Footer */
 .site-footer { border-top: 1px solid var(--border); padding: 28px 0 40px; color: var(--muted); font-size: 13px; }
 .site-footer .container { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 .site-footer a { color: var(--text-2); }
 
+@media (max-width: 1440px) {
+  .brand-sub { display: none; }
+}
 @media (max-width: 960px) {
   .detail-grid { grid-template-columns: 1fr; }
   .devs { grid-template-columns: 1fr; }

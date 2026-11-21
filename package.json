@@ -1,0 +1,12 @@
+{
+  "name": "gpu-atlas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static GPU reference site: NVIDIA, AMD and Intel spec sheets, guides and sitemap.",
+  "scripts": {
+    "build": "node scripts/build.cjs"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}
