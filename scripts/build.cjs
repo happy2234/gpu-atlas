@@ -70,7 +70,7 @@ function layout({ title, desc, canonical, depth, body, og, jsonld, active }) {
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233f6b0a'/%3E%3Cpath d='M8 22V10h6a5 5 0 0 1 0 10h-2' fill='none' stroke='%23fff' stroke-width='3'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="${p}assets/styles.css">
   <script>try{var t=localStorage.getItem("gpuatlas:theme");t=t?JSON.parse(t):(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 ${jsonld ? `  <script type="application/ld+json">${JSON.stringify(jsonld).replace(/</g, "\\u003c")}</script>\n` : ""}</head>
@@ -394,32 +394,31 @@ function finderPage() {
     vs: vsFor(g).slice(0, 2).map((v) => [vsName(v), `${p}compare/${v.slug}/${SUF}`])
   }));
   const countries = COUNTRIES.map((c) => ({ c: c.code, n: c.name, sym: money(0, c.code).replace(/0$/, ""), loc: c.cur === "INR" ? "en-IN" : "en-US" }));
-  const body = `<div class="page-head"><p class="eyebrow">GPU finder</p><h1>Which graphics card should I buy?</h1>
-    <p class="lead">Answer five questions and get a shortlist of current cards that fit your use, budget and power supply, with the reasons for each pick and links to independent reviews.</p></div>
+  const tile = (v, t, d) => `<button type="button" class="opt" data-v="${v}"><b>${t}</b><span>${d}</span></button>`;
+  const step = (n, title, inner, cls = "") => `<li class="step ${cls}"><span class="step-n" aria-hidden="true">${n}</span><div class="step-body"><h2>${title}</h2>${inner}</div></li>`;
+  const body = `<div class="finder-hero"><h1>Find the right graphics card</h1>
+    <p class="lead">Tell us what you'll do with it and what you can spend. You'll get a shortlist of current cards, the reasons for each, and reviews to read before you buy.</p></div>
   <div class="finder">
-    <form id="ff" class="finder-form" onsubmit="return false">
-      <fieldset><legend>1. What will you use it for?</legend><div class="chips" data-k="use">
-        <button type="button" data-v="g1080">Gaming at 1080p</button><button type="button" data-v="g1440">Gaming at 1440p</button><button type="button" data-v="g4k">Gaming at 4K</button>
-        <button type="button" data-v="create">Video, 3D &amp; photo editing</button><button type="button" data-v="ai">Local AI / LLMs</button></div></fieldset>
-      <fieldset><legend>2. Which computer?</legend><div class="chips" data-k="plat">
-        <button type="button" data-v="pc">Windows or Linux desktop PC</button><button type="button" data-v="mac">Mac</button></div></fieldset>
-      <fieldset class="pc-only"><legend>3. Your budget for the graphics card</legend>
-        <div class="row"><label>Country <select id="fcc">${countries.map((c) => `<option value="${c.c}">${esc(c.n)}</option>`).join("")}</select></label>
-        <label>Budget <span class="money-in"><span id="fsym">$</span><input id="fbud" type="number" min="0" step="10" inputmode="numeric" placeholder="e.g. 600"></span></label></div>
-        <div class="row"><label class="inline"><input type="checkbox" id="fstreet" checked> Use today's street price where we have one</label></div></fieldset>
-      <fieldset class="pc-only"><legend>4. Brand preference</legend><div class="chips" data-k="brand">
-        <button type="button" data-v="any">No preference</button><button type="button" data-v="NVIDIA">NVIDIA</button><button type="button" data-v="AMD">AMD</button><button type="button" data-v="Intel">Intel</button></div></fieldset>
-      <fieldset class="pc-only"><legend>5. Power supply (optional)</legend>
-        <div class="row"><label>Wattage <select id="fpsu"><option value="">Don't know / will upgrade</option>${[450, 550, 650, 750, 850, 1000, 1200].map((w) => `<option value="${w}">${w} W</option>`).join("")}</select></label></div>
-        <p class="sub">We leave about 250 W for the rest of the PC. Check the card maker's recommended PSU before buying.</p></fieldset>
-    </form>
-    <section id="fres" class="finder-results" aria-live="polite"></section>
+    <ol class="steps">
+      ${step(1, "What will you use it for?", `<div class="opts" data-k="use">${tile("g1080", "1080p gaming", "High frame rates on a Full HD monitor")}${tile("g1440", "1440p gaming", "The sweet spot for most players")}${tile("g4k", "4K gaming", "Maximum detail on a big screen")}${tile("create", "Editing &amp; 3D", "Video, photo and 3D rendering")}${tile("ai", "Local AI", "Running LLMs and image models yourself")}</div>`)}
+      ${step(2, "Which computer is it for?", `<div class="opts two" data-k="plat">${tile("pc", "Windows or Linux PC", "You'll buy a graphics card")}${tile("mac", "Mac", "The GPU comes with the chip you choose")}</div>`)}
+      ${step(3, "How much can you spend?", `<div class="fbudget">
+          <div class="fbudget-top"><select id="fcc" aria-label="Country">${countries.map((c) => `<option value="${c.c}">${esc(c.n)}</option>`).join("")}</select>
+            <output id="fbudout" for="frange" class="fbudget-out">No limit</output></div>
+          <input id="frange" type="range" min="0" step="10" aria-label="Budget">
+          <div class="fbudget-foot"><span id="ffit" class="sub"></span><label class="sub exact">Exact amount <span class="money-in"><span id="fsym">$</span><input id="fbud" type="number" min="0" inputmode="numeric" placeholder="Any"></span></label></div>
+          <label class="check"><input type="checkbox" id="fstreet" checked> Compare with today's street price where we have one</label></div>`, "pc-only")}
+      ${step(4, "Any brand preference?", `<div class="seg" data-k="brand"><button type="button" data-v="any">No preference</button><button type="button" data-v="NVIDIA">NVIDIA</button><button type="button" data-v="AMD">AMD</button><button type="button" data-v="Intel">Intel</button></div>`, "pc-only")}
+      ${step(5, "What power supply do you have?", `<div class="seg" data-k="psu"><button type="button" data-v="">Not sure</button>${[450, 550, 650, 750, 850, 1000].map((w) => `<button type="button" data-v="${w}">${w} W</button>`).join("")}</div>
+          <p class="sub hint">We allow about 250 W for the rest of the PC. Check the card maker's recommended supply before you buy.</p>`, "pc-only")}
+    </ol>
+    <aside class="shortlist" aria-labelledby="slh"><div class="sl-head"><h2 id="slh">Your shortlist</h2><p id="fsum" class="sub"></p></div><div id="fres" aria-live="polite"></div></aside>
   </div>
-  <div class="section"><h2>How the finder chooses</h2><ul class="facts">
-    <li><b>Memory first.</b> We look for at least 8 GB for 1080p, 12 GB for 1440p and editing, and 16 GB for 4K and local AI. Cards below that are shown with a warning, not hidden.</li>
-    <li><b>Then the highest tier you can afford.</b> Within a brand's current lineup, a higher launch price means a faster card. Across brands we don't claim which is faster: GPU Atlas doesn't copy benchmarks, so each pick links to independent reviews.</li>
-    <li><b>Local AI</b> ranks by memory, then memory bandwidth, and includes workstation cards. <b>Editing</b> gives NVIDIA a small boost because more creative apps support CUDA acceleration.</li>
-    <li><b>Prices</b> are the official launch price in your country, or the dated street price when you tick that box. Prices change; check a retailer before buying.</li></ul></div>
+  <div class="section finder-method"><h2>How the finder chooses</h2><ul class="facts">
+    <li><b>Memory first.</b> We look for at least 8 GB for 1080p, 12 GB for 1440p and editing, and 16 GB for 4K and local AI. Cards with less are flagged, not hidden.</li>
+    <li><b>Then the highest tier you can afford.</b> Within a brand's lineup, a higher launch price means a faster card. Across brands we don't claim which is faster, because GPU Atlas doesn't copy benchmarks; each pick links to independent reviews.</li>
+    <li><b>Local AI</b> ranks by memory, then memory bandwidth, and includes workstation cards. <b>Editing</b> gives NVIDIA a small lift because more creative apps support CUDA.</li>
+    <li><b>Prices</b> are the official launch price in your country, or the dated street price when that box is ticked. Check a retailer before buying.</li></ul></div>
   <script type="application/json" id="fdata">${JSON.stringify({ cards: data, countries }).replace(/</g, "\\u003c")}</script>
   <script>
   (function(){
@@ -427,66 +426,76 @@ function finderPage() {
     var st={use:"g1440",plat:"pc",brand:"any",cc:"US",bud:"",street:true,psu:""};
     try{var h=new URLSearchParams(location.hash.slice(1));h.forEach(function(v,k){if(k in st)st[k]=(k==="street")?v!=="0":v;});}catch(e){}
     var $=function(id){return document.getElementById(id);};
-    var NEED={g1080:8,g1440:12,g4k:16,create:12,ai:16}, USE={g1080:"1080p gaming",g1440:"1440p gaming",g4k:"4K gaming",create:"video, 3D and photo editing",ai:"local AI and LLMs"};
-    function fmt(v,cc){var c=C[cc];return c.sym+Number(v).toLocaleString(c.loc,{maximumFractionDigits:0});}
+    var NEED={g1080:8,g1440:12,g4k:16,create:12,ai:16}, USE={g1080:"1080p gaming",g1440:"1440p gaming",g4k:"4K gaming",create:"editing and 3D",ai:"local AI"};
+    var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches, lastTop=null;
+    function fmt(v,cc){var c=C[cc||st.cc];return c.sym+Number(v).toLocaleString(c.loc,{maximumFractionDigits:0});}
     function esc(s){return String(s).replace(/[&<>"]/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m];});}
-    function price(g){var s=st.street&&g.st[st.cc];if(s)return{v:s[0],kind:"street",date:s[1]};var l=g.pr[st.cc];return l!=null?{v:l,kind:"launch"}:null;}
-    function score(g){var need=NEED[st.use],m=g.mem||0,sc;
-      if(st.use==="ai")sc=m*1000+(g.bw||0);else sc=(g.us||0)*(st.use==="create"&&g.b==="NVIDIA"?1.15:1);
-      if(m<need)sc*=0.5;return sc;}
+    function bwTxt(v){return v>=1000?(v/1000).toLocaleString("en-US",{maximumFractionDigits:2})+" TB/s":v+" GB/s";}
+    function price(g){var s=st.street&&g.st[st.cc];if(s)return{v:s[0],kind:"Street price, "+s[1]};var l=g.pr[st.cc];return l!=null?{v:l,kind:"Launch price in "+C[st.cc].n}:null;}
+    function score(g){var m=g.mem||0,sc=st.use==="ai"?m*1000+(g.bw||0):(g.us||0)*(st.use==="create"&&g.b==="NVIDIA"?1.15:1);return m<NEED[st.use]?sc*0.5:sc;}
+    function pool(){return D.cards.filter(function(g){return g.b!=="Apple"&&(st.use==="ai"||st.use==="create"||g.seg==="desktop")&&(st.brand==="any"||g.b===st.brand);});}
+    function fitsPsu(g){var psu=Number(st.psu)||0;return!psu||!g.w||g.w+250<=psu;}
+    function rangeMax(){var ps=pool().map(price).filter(Boolean).map(function(x){return x.v;});var m=ps.length?Math.max.apply(null,ps):1000;var stepv=st.cc==="IN"||st.cc==="JP"?1000:10;return Math.ceil(m/stepv)*stepv;}
+    function meter(label,val,max,mark,txt,bad){var pct=Math.max(2,Math.min(100,val/max*100));return'<div class="meter'+(bad?" bad":"")+'"><span class="m-l">'+label+'</span><span class="m-bar"><i style="width:'+pct+'%"></i>'+(mark!=null?'<em style="left:'+Math.min(100,mark/max*100)+'%"></em>':"")+'</span><span class="m-v">'+txt+'</span></div>';}
+    function card(g,rank,pr,extra){
+      var need=NEED[st.use],bud=Number(st.bud)||0,psu=Number(st.psu)||0,m=g.mem||0,ms=[];
+      if(m)ms.push(meter("Memory",m,Math.max(32,m,need*2),need,m+" GB",m<need));
+      if(pr&&bud)ms.push(meter("Budget",pr.v,bud,null,Math.round(pr.v/bud*100)+"% of budget",false));
+      if(g.w&&psu)ms.push(meter("Power",g.w+250,psu,null,"~"+(g.w+250)+" of "+psu+" W",g.w+250>psu));
+      if(g.bw&&st.use==="ai")ms.push(meter("Bandwidth",g.bw,Math.max(1800,g.bw),null,bwTxt(g.bw),false));
+      return'<article class="pick'+(rank===0?" top":"")+'" data-id="'+g.id+'"><div class="pick-head"><div><span class="pick-rank">'+(rank===0?"Best match":"Also consider")+'</span><h3><a href="'+g.u+'">'+esc(g.n)+'</a></h3></div>'
+        +(pr?'<div class="pick-price"><b>'+fmt(pr.v)+'</b><span>'+esc(pr.kind)+'</span></div>':"")+'</div>'
+        +(ms.length?'<div class="meters">'+ms.join("")+'</div>':"")
+        +(m&&m<need?'<p class="pick-warn">'+m+' GB is below the '+need+' GB we suggest for '+USE[st.use]+'.</p>':"")
+        +(extra.length?'<ul class="why">'+extra.map(function(w){return"<li>"+w+"</li>";}).join("")+'</ul>':"")
+        +'<div class="pick-links"><a href="'+g.u+'">Full specs</a>'+g.vs.map(function(v){return'<a href="'+v[1]+'">'+esc(v[0])+'</a>';}).join("")+(g.rv.length?'<span class="rv">Reviews: '+g.rv.map(function(r){return'<a href="'+r[1]+'" target="_blank" rel="noopener">'+esc(r[0])+'</a>';}).join(", ")+'</span>':"")+'</div></article>';}
     function sync(){
-      document.querySelectorAll(".chips").forEach(function(c){var k=c.getAttribute("data-k");c.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===st[k]);});});
-      $("fcc").value=st.cc;$("fbud").value=st.bud;$("fstreet").checked=st.street;$("fpsu").value=st.psu;$("fsym").textContent=C[st.cc].sym;
+      document.querySelectorAll("[data-k]").forEach(function(c){var k=c.getAttribute("data-k");c.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===String(st[k]));});});
       document.querySelectorAll(".pc-only").forEach(function(f){f.hidden=st.plat==="mac";});
+      var mx=rangeMax(),r=$("frange");r.max=mx;r.step=st.cc==="IN"||st.cc==="JP"?1000:10;r.value=st.bud?Math.min(Number(st.bud),mx):mx;
+      r.style.setProperty("--fill",(r.value/mx*100)+"%");
+      $("fbudout").textContent=st.bud?fmt(st.bud):"No limit";
+      $("fcc").value=st.cc;if(document.activeElement!==$("fbud"))$("fbud").value=st.bud;$("fstreet").checked=st.street;$("fsym").textContent=C[st.cc].sym;
       try{history.replaceState(null,"","#"+new URLSearchParams({use:st.use,plat:st.plat,brand:st.brand,cc:st.cc,bud:st.bud,street:st.street?"1":"0",psu:st.psu}).toString());}catch(e){}
       render();}
-    function card(g,rank,pr,why){
-      var warn=g.mem!=null&&g.mem<NEED[st.use];
-      return '<article class="pick'+(rank===0?" top":"")+'"><div class="pick-head"><span class="eyebrow">'+(rank===0?"Best match":"Alternative")+'</span><h3><a href="'+g.u+'">'+esc(g.n)+'</a></h3>'
-        +(pr?'<div class="pick-price">'+fmt(pr.v,st.cc)+'<span class="sub"> '+(pr.kind==="street"?"street price, "+esc(pr.date):"launch price")+'</span></div>':"")+'</div>'
-        +'<ul class="why">'+why.map(function(w){return"<li>"+w+"</li>";}).join("")+(warn?'<li class="warn">Only '+g.mem+' GB of memory: below the '+NEED[st.use]+' GB we suggest for '+USE[st.use]+'.</li>':"")+'</ul>'
-        +'<div class="pick-links"><a href="'+g.u+'">Full specs</a>'+g.vs.map(function(v){return' · <a href="'+v[1]+'">'+esc(v[0])+'</a>';}).join("")+(g.rv.length?' · Reviews: '+g.rv.map(function(r){return'<a href="'+r[1]+'" target="_blank" rel="noopener">'+esc(r[0])+'</a>';}).join(", "):"")+'</div></article>';}
+    function flash(){var t=document.querySelector(".pick.top");if(!t)return;var id=t.getAttribute("data-id");if(id!==lastTop&&lastTop!==null&&!reduce){t.classList.add("flash");}lastTop=id;}
     function render(){
-      var out=$("fres");
+      var out=$("fres"),sum=$("fsum");
       if(st.plat==="mac"){
-        var macs=D.cards.filter(function(g){return g.b==="Apple";}).sort(function(a,b){return st.use==="ai"||st.use==="create"?(b.mem||0)-(a.mem||0):(a.gc||0)-(b.gc||0);});
+        var macs=D.cards.filter(function(g){return g.b==="Apple";});
         var pickId={g1080:"apple-m5",g1440:"apple-m5-pro",g4k:"apple-m5-max",create:"apple-m5-max",ai:"apple-m5-ultra"}[st.use];
-        var first=macs.filter(function(g){return g.id===pickId;}).concat(macs.filter(function(g){return g.id!==pickId;})).slice(0,3);
-        out.innerHTML='<p class="note-box">Macs don\u2019t take separate graphics cards: the GPU is part of the chip, so you choose it when you choose the Mac. '+(st.use.charAt(0)==="g"?"Fewer games support macOS than Windows, so check your games first.":"")+'</p>'
-          +first.map(function(g,i){return card(g,i,null,[g.gc+'-core GPU (max)','Up to '+g.mem+' GB unified memory, shared by CPU and GPU',g.bw?(g.bw>=1000?(g.bw/1000)+" TB/s":g.bw+" GB/s")+" memory bandwidth":"",esc(g.plat)].filter(Boolean));}).join("");
-        return;}
-      var bud=Number(st.bud)||0, psu=Number(st.psu)||0, need=NEED[st.use];
-      var pool=D.cards.filter(function(g){return g.b!=="Apple"&&(st.use==="ai"||st.use==="create"||g.seg==="desktop")&&(st.brand==="any"||g.b===st.brand);});
-      var noPrice=pool.filter(function(g){return!price(g);}).length;
-      var priced=pool.filter(function(g){return price(g);});
-      var fitsPsu=function(g){return!psu||!g.w||g.w+250<=psu;};
+        var order=macs.filter(function(g){return g.id===pickId;}).concat(macs.filter(function(g){return g.id!==pickId;}).sort(function(a,b){return Math.abs((a.mem||0)-NEED[st.use]*4)-Math.abs((b.mem||0)-NEED[st.use]*4);})).slice(0,3);
+        sum.textContent="Mac chips for "+USE[st.use]+". On a Mac you pick the GPU when you pick the chip.";
+        out.innerHTML=(st.use.charAt(0)==="g"?'<p class="note">Fewer games run on macOS than on Windows, so check your games first.</p>':"")+order.map(function(g,i){return card(g,i,null,[g.gc+"-core GPU, up to "+g.mem+" GB of unified memory shared with the CPU",bwTxt(g.bw)+" memory bandwidth","In: "+esc(g.plat)]);}).join("");
+        flash();return;}
+      var bud=Number(st.bud)||0,need=NEED[st.use],P=pool();
+      var noPrice=P.filter(function(g){return!price(g);}).length, priced=P.filter(function(g){return price(g);});
       var inBud=priced.filter(function(g){return(!bud||price(g).v<=bud)&&fitsPsu(g);}).sort(function(a,b){return score(b)-score(a)||price(a).v-price(b).v;});
-      var msgs=[];
-      if(!bud)msgs.push("Enter a budget to narrow this down. Showing the strongest matches at any price.");
-      if(noPrice&&st.cc!=="US")msgs.push(noPrice+" current card"+(noPrice>1?"s have":" has")+" no official "+esc(C[st.cc].n)+" price yet, so "+(noPrice>1?"they are":"it is")+" left out. Try the United States to see them all.");
+      $("ffit").innerHTML="<b>"+inBud.length+"</b> of "+priced.length+" current cards fit";
+      sum.textContent="For "+USE[st.use]+(bud?", up to "+fmt(bud):"")+(st.brand!=="any"?", "+st.brand+" only":"")+(st.psu?", "+st.psu+" W supply":"")+".";
+      var notes=[];
+      if(noPrice&&st.cc!=="US")notes.push(noPrice+" card"+(noPrice>1?"s have":" has")+" no official "+esc(C[st.cc].n)+" price yet and "+(noPrice>1?"are":"is")+" left out. Choose United States to include them.");
       var top=inBud.slice(0,3);
-      if(!top.length){out.innerHTML='<p class="note-box">No current card fits a budget of '+fmt(bud,st.cc)+(psu?" and a "+psu+" W power supply":"")+'. The cheapest option here is '+(priced.length?esc(priced.sort(function(a,b){return price(a).v-price(b).v;})[0].n)+" at "+fmt(price(priced[0]).v,st.cc):"not listed")+'.</p>';return;}
-      var html=msgs.map(function(m){return'<p class="note-box">'+m+'</p>';}).join("");
-      html+=top.map(function(g,i){var pr=price(g),why=[];
-        if(bud)why.push("Within your budget: "+fmt(pr.v,st.cc)+" of "+fmt(bud,st.cc)+".");
-        if(g.mem)why.push(g.mem+" GB of memory"+(g.mem>=need?" \u2014 enough for "+USE[st.use]+".":"."));
-        if(st.use==="ai"&&g.bw)why.push((g.bw>=1000?(g.bw/1000)+" TB/s":g.bw+" GB/s")+" memory bandwidth, which sets how fast models generate text.");
-        if(st.use==="create"&&g.b==="NVIDIA")why.push("CUDA is supported by most creative apps (Blender, Premiere Pro, DaVinci Resolve).");
-        if(g.w)why.push("Rated "+g.w+" W"+(psu?" \u2014 fits your "+psu+" W supply with headroom.":"; a "+(Math.ceil((g.w+250)/50)*50)+" W or larger supply is a sensible minimum."));
-        if(g.seg==="pro")why.push("Workstation card: certified drivers and more memory, at a higher price.");
-        return card(g,i,pr,why);}).join("");
-      var t=top[0], up=priced.filter(function(g){return fitsPsu(g)&&bud&&price(g).v>bud&&price(g).v<=bud*1.25&&score(g)>score(t);}).sort(function(a,b){return price(a).v-price(b).v;})[0];
-      if(up)html+='<p class="note-box">If you can stretch to '+fmt(price(up).v,st.cc)+', the <a href="'+up.u+'">'+esc(up.n)+'</a> is the next step up'+(up.mem>t.mem?" with "+up.mem+" GB of memory":"")+'.</p>';
-      out.innerHTML=html;}
-    document.querySelectorAll(".chips").forEach(function(c){c.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;st[c.getAttribute("data-k")]=b.getAttribute("data-v");sync();});});
-    $("fcc").addEventListener("change",function(){st.cc=this.value;sync();});
+      if(!top.length){var cheap=priced.slice().sort(function(a,b){return price(a).v-price(b).v;})[0];
+        out.innerHTML='<div class="empty"><b>Nothing fits yet.</b><p>No current card comes in under '+fmt(bud)+(st.psu?" on a "+st.psu+" W supply":"")+'.'+(cheap?' The lowest-priced option is the <a href="'+cheap.u+'">'+esc(cheap.n)+'</a> at '+fmt(price(cheap).v)+'. Raise your budget, or try another brand.':"")+'</p></div>';lastTop=null;return;}
+      var html=top.map(function(g,i){var pr=price(g),ex=[];
+        if(st.use==="create"&&g.b==="NVIDIA")ex.push("CUDA acceleration in Blender, Premiere Pro and DaVinci Resolve.");
+        if(st.use==="ai"&&g.bw)ex.push("Bandwidth sets how quickly a model generates text.");
+        if(g.w&&!st.psu)ex.push("Rated "+g.w+" W; plan for a "+(Math.ceil((g.w+250)/50)*50)+" W or larger supply.");
+        if(g.seg==="pro")ex.push("Workstation card: certified drivers and more memory, at a higher price.");
+        return card(g,i,pr,ex);}).join("");
+      var t=top[0],upc=priced.filter(function(g){return fitsPsu(g)&&bud&&price(g).v>bud&&price(g).v<=bud*1.25&&score(g)>score(t);}).sort(function(a,b){return price(a).v-price(b).v;})[0];
+      if(upc)notes.push('Stretch to '+fmt(price(upc).v)+' and the <a href="'+upc.u+'">'+esc(upc.n)+'</a> is the next step up'+(upc.mem>t.mem?", with "+upc.mem+" GB of memory":"")+'.');
+      out.innerHTML=html+notes.map(function(n){return'<p class="note">'+n+'</p>';}).join("");flash();}
+    document.querySelectorAll("[data-k]").forEach(function(c){c.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;st[c.getAttribute("data-k")]=b.getAttribute("data-v");sync();});});
+    $("fcc").addEventListener("change",function(){st.cc=this.value;st.bud="";sync();});
+    $("frange").addEventListener("input",function(){st.bud=Number(this.value)>=Number(this.max)?"":this.value;sync();});
     $("fbud").addEventListener("input",function(){st.bud=this.value;sync();});
     $("fstreet").addEventListener("change",function(){st.street=this.checked;sync();});
-    $("fpsu").addEventListener("change",function(){st.psu=this.value;sync();});
     sync();
   })();
   </script>`;
-  return layout({ title: "Which graphics card should I buy? GPU finder for 2026 — GPU Atlas", desc: "Answer five questions — use, budget in your currency, brand and power supply — and get a shortlist of current NVIDIA, AMD and Intel graphics cards, or the right Apple chip for a Mac.", canonical, depth, body, og: null, active: "finder",
+  return layout({ title: "Which graphics card should I buy? GPU finder for 2026 — GPU Atlas", desc: "Answer five quick questions — use, budget in your currency, brand and power supply — and get a shortlist of current NVIDIA, AMD and Intel graphics cards, or the right Apple chip for a Mac.", canonical, depth, body, og: null, active: "finder",
     jsonld: { "@context": "https://schema.org", "@type": "WebApplication", name: "GPU finder", applicationCategory: "UtilitiesApplication", operatingSystem: "Any", url: canonical, offers: { "@type": "Offer", price: "0", priceCurrency: "USD" } } });
 }
 
