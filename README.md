@@ -2,7 +2,7 @@
 
 An independent reference to NVIDIA, AMD and Intel GPUs: full spec sheets for desktop and laptop graphics, workstation cards, data-center accelerators, AI PCs and edge modules, with variants, official launch prices by country, dated street-price snapshots, side-by-side comparison and per-product sources.
 
-Live site: https://happy2234.github.io/gpu-atlas/
+Live site: https://gpuatlas.in/ (also reachable at https://happy2234.github.io/gpu-atlas/, which redirects)
 
 ## How it works
 
@@ -47,8 +47,8 @@ Options: `SITE_URL` (canonical/sitemap base), `LINK_SUFFIX=index.html` (for host
 
 ## Search engines
 
-GitHub Pages serves this project under `/gpu-atlas/`, so search engines will not read `robots.txt` from here. Submit `https://happy2234.github.io/gpu-atlas/sitemap.xml` in Google Search Console and Bing Webmaster Tools instead.
+The site is served at the root of https://gpuatlas.in, so `robots.txt` and `sitemap.xml` are found automatically. Also submit `https://gpuatlas.in/sitemap.xml` in Google Search Console (Domain property `gpuatlas.in`) and Bing Webmaster Tools.
 
 ## Disclaimer
 
-Not affiliated with or endorsed by NVIDIA, AMD or Intel. Product names are trademarks of their respective owners.
+Not affiliated with or endorsed by NVIDIA, AMD, Intel or Apple. Product names are trademarks of their respective owners.

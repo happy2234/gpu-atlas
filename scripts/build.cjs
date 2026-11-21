@@ -5,7 +5,7 @@
  *   node scripts/build.cjs
  *
  * Environment:
- *   SITE_URL      Absolute site URL used for canonical links and the sitemap (default: GitHub Pages URL)
+ *   SITE_URL      Absolute site URL used for canonical links and the sitemap (default: https://gpuatlas.in)
  *   LINK_SUFFIX   Appended to internal directory links, e.g. "index.html" for hosts without directory indexes
  *   BUILD_DATE    YYYY-MM-DD used for sitemap lastmod (default: today)
  */
@@ -16,7 +16,7 @@ const vm = require("vm");
 
 const ROOT = path.resolve(__dirname, "..");
 const OUT = process.env.OUT_DIR ? path.resolve(process.env.OUT_DIR) : path.join(ROOT, "dist");
-const SITE = (process.env.SITE_URL || "https://happy2234.github.io/gpu-atlas").replace(/\/$/, "");
+const SITE = (process.env.SITE_URL || "https://gpuatlas.in").replace(/\/$/, "");
 const SUF = process.env.LINK_SUFFIX || "";
 const BUILD_DATE = process.env.BUILD_DATE || new Date().toISOString().slice(0, 10);
 
@@ -417,6 +417,7 @@ function finderPage() {
   <div class="section finder-method"><h2>How the finder chooses</h2><ul class="facts">
     <li><b>Memory first.</b> We look for at least 8 GB for 1080p, 12 GB for 1440p and editing, and 16 GB for 4K and local AI. Cards with less are flagged, not hidden.</li>
     <li><b>Then the highest tier you can afford.</b> Within a brand's lineup, a higher launch price means a faster card. Across brands we don't claim which is faster, because GPU Atlas doesn't copy benchmarks; each pick links to independent reviews.</li>
+    <li><b>No overspending on lower resolutions.</b> Above about $400 at launch for 1080p and $700 for 1440p, a pricier card adds little you would notice at that resolution, so the finder ranks it lower.</li>
     <li><b>Local AI</b> ranks by memory, then memory bandwidth, and includes workstation cards. <b>Editing</b> gives NVIDIA a small lift because more creative apps support CUDA.</li>
     <li><b>Prices</b> are the official launch price in your country, or the dated street price when that box is ticked. Check a retailer before buying.</li></ul></div>
   <script type="application/json" id="fdata">${JSON.stringify({ cards: data, countries }).replace(/</g, "\\u003c")}</script>
@@ -432,8 +433,10 @@ function finderPage() {
     function esc(s){return String(s).replace(/[&<>"]/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m];});}
     function bwTxt(v){return v>=1000?(v/1000).toLocaleString("en-US",{maximumFractionDigits:2})+" TB/s":v+" GB/s";}
     function price(g){var s=st.street&&g.st[st.cc];if(s)return{v:s[0],kind:"Street price, "+s[1]};var l=g.pr[st.cc];return l!=null?{v:l,kind:"Launch price in "+C[st.cc].n}:null;}
-    function score(g){var m=g.mem||0,sc=st.use==="ai"?m*1000+(g.bw||0):(g.us||0)*(st.use==="create"&&g.b==="NVIDIA"?1.15:1);return m<NEED[st.use]?sc*0.5:sc;}
-    function pool(){return D.cards.filter(function(g){return g.b!=="Apple"&&(st.use==="ai"||st.use==="create"||g.seg==="desktop")&&(st.brand==="any"||g.b===st.brand);});}
+    var CAP={g1080:400,g1440:700};
+    function tier(us){var c=CAP[st.use];return!c||us<=c?us:c-(us-c)*0.1;}
+    function score(g){var m=g.mem||0,sc=st.use==="ai"?m*1000+(g.bw||0):tier(g.us||0)*(st.use==="create"&&g.b==="NVIDIA"?1.15:1);return m<NEED[st.use]?sc*0.5:sc;}
+    function pool(){return D.cards.filter(function(g){return g.b!=="Apple"&&(g.seg==="desktop"||(st.use==="ai"&&g.seg==="pro"))&&(st.brand==="any"||g.b===st.brand);});}
     function fitsPsu(g){var psu=Number(st.psu)||0;return!psu||!g.w||g.w+250<=psu;}
     function rangeMax(){var ps=pool().map(price).filter(Boolean).map(function(x){return x.v;});var m=ps.length?Math.max.apply(null,ps):1000;var stepv=st.cc==="IN"||st.cc==="JP"?1000:10;return Math.ceil(m/stepv)*stepv;}
     function meter(label,val,max,mark,txt,bad){var pct=Math.max(2,Math.min(100,val/max*100));return'<div class="meter'+(bad?" bad":"")+'"><span class="m-l">'+label+'</span><span class="m-bar"><i style="width:'+pct+'%"></i>'+(mark!=null?'<em style="left:'+Math.min(100,mark/max*100)+'%"></em>':"")+'</span><span class="m-v">'+txt+'</span></div>';}
@@ -693,6 +696,7 @@ const urls = [
   ...LIST.map((g) => ({ loc: gpuUrl(g.id), lastmod: g.checked || BUILD_DATE, pr: g.status === "current" ? "0.9" : "0.6" }))
 ];
 write("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${xml(u.loc)}</loc><lastmod>${u.lastmod}</lastmod><priority>${u.pr}</priority></url>`).join("\n")}\n</urlset>\n`);
+write("CNAME", SITE.replace(/^https?:\/\//, "") + "\n");
 write("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
 
 console.log(`Built ${LIST.length} product pages, ${GUIDES.length} guides, ${VS.length} comparisons, ${BRANDS.length} brand pages, GPU finder, ${pngs} preview images, ${urls.length} sitemap URLs → dist/ (site: ${SITE}${SUF ? `, link suffix "${SUF}"` : ""})`);
