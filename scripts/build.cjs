@@ -40,6 +40,7 @@ const up = (depth) => "../".repeat(depth);
 const dir = (p) => p + SUF; // internal directory link
 const gpuUrl = (id) => `${SITE}/gpu/${id}/`;
 const BRAND_COLOR = { NVIDIA: "#3f6b0a", AMD: "#a3171b", Intel: "#0b5ca8" };
+const INDEXNOW_KEY = "5f3c9a1e7b2d4c8a9e6f0b1d2c3a4e5f";
 const pct = (a, b) => (b ? Math.round(((a - b) / b) * 100) : null);
 const memText = (g) => { const m = g.specs.mem; if (m == null) return null; if (typeof m === "string") return m; return m >= 1000 ? `${(m / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} TB` : `${m} GB`; };
 
@@ -47,7 +48,7 @@ function hasOg(id) { return fs.existsSync(path.join(OUT, "og", `${id}.png`)); }
 
 function layout({ title, desc, canonical, depth, body, og, jsonld, active }) {
   const p = up(depth);
-  const nav = [["Database", dir(p) || "./", "database"], ["Compare", `${dir(p)}#compare`, "compare"], ["GPU finder", dir(`${p}gpu-finder/`), "finder"], ["Guides", dir(`${p}guides/`), "guides"], ["Architectures", `${dir(p)}#architectures`, "architectures"], ["Glossary", `${dir(p)}#glossary`, "glossary"], ["Sources", `${dir(p)}#methodology`, "methodology"]];
+  const nav = [["Database", dir(p) || "./", "database"], ["Compare", `${dir(p)}#compare`, "compare"], ["GPU finder", dir(`${p}gpu-finder/`), "finder"], ["Guides", dir(`${p}guides/`), "guides"], ["Architectures", dir(`${p}architectures/`), "architectures"], ["Glossary", dir(`${p}glossary/`), "glossary"], ["About", dir(`${p}about/`), "methodology"]];
   const ogImg = og ? `${SITE}/og/${og}.png` : `${SITE}/og/default.png`;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -88,7 +89,7 @@ ${body}
   <footer class="site-footer">
     <div class="container">
       <span>GPU Atlas is an independent reference and is not affiliated with NVIDIA, AMD, Intel or Apple. Product names are trademarks of their owners.</span>
-      <span>Data updated ${esc(D.updated)} · <a href="${dir(p)}#methodology">Methodology</a> · <a href="${esc(D.REPO)}" rel="noopener">GitHub</a></span>
+      <span>Data updated ${esc(D.updated)} · <a href="${dir(p + "about/")}">About</a> · <a href="${esc(D.REPO)}" rel="noopener">GitHub</a></span>
     </div>
   </footer>
   <script>
@@ -136,7 +137,7 @@ function productPage(g) {
     .sort((a, b) => Math.abs(a.msrp - g.msrp) - Math.abs(b.msrp - g.msrp) || (b.launch > a.launch ? 1 : -1)).slice(0, 5) : [];
 
   const overview = [
-    ["Brand", g.brand], ["Segment", D.SEGMENTS[g.seg]], ["Series", g.series], ["Architecture", g.arch], ["Status", D.STATUS[g.status]], ["Launch", fmtDate(g.launch)],
+    ["Brand", g.brand], ["Segment", D.SEGMENTS[g.seg]], ["Series", seriesFor(g) ? `<a href="${dir(p + "series/" + seriesFor(g).slug + "/")}">${esc(g.series)}</a>` : esc(g.series), true], ["Architecture", archFor(g) ? `<a href="${dir(p + "architectures/" + archFor(g).slug + "/")}">${esc(g.arch)}</a>` : esc(g.arch), true], ["Status", D.STATUS[g.status]], ["Launch", fmtDate(g.launch)],
     ["Launch price (US)", (g.msrp ? esc(money(g.msrp, "US")) : "—") + (g.priceNote ? `<span class="note">${esc(g.priceNote)}</span>` : ""), true]
   ];
   const groups = FIELDS.map(([title, fields]) => {
@@ -188,6 +189,7 @@ function productPage(g) {
           ${street}
           ${groups}
           ${variants}
+          ${(() => { const f = faqFor(g); return f.length ? `<section class="spec-group faq"><h3>Common questions</h3>${f.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}</section>` : ""; })()}
         </div>
         <aside>
           ${siblings.length > 1 ? `<div class="panel"><h3>${esc(g.series)} family</h3><ul>${siblings.map((x) => `<li class="${x === g ? "here" : ""}">${x === g ? esc(x.name) : `<a href="${link(x)}">${esc(x.name)}</a>`}</li>`).join("")}</ul></div>` : ""}
@@ -208,9 +210,10 @@ function productPage(g) {
       { "@type": "ListItem", position: 1, name: "GPU database", item: `${SITE}/` },
       { "@type": "ListItem", position: 2, name: g.brand, item: `${SITE}/brands/${brandSlug(g.brand)}/` },
       { "@type": "ListItem", position: 3, name: g.name, item: canonical }
-    ] }
+    ] },
+    ...(faqFor(g).length ? [{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqFor(g).map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) }] : [])
   ];
-  return layout({ title: `${g.name} specs, price & variants — GPU Atlas`, desc: describe(g), canonical, depth, body, og: hasOg(g.id) ? g.id : null, jsonld, active: "database" });
+  return layout({ title: priceIn(g, "IN") != null ? `${g.name}: specs, price in India & ${Object.keys(g.prices).length - 1} more countries — GPU Atlas` : `${g.name} specs, price & variants — GPU Atlas`, desc: describe(g), canonical, depth, body, og: hasOg(g.id) ? g.id : null, jsonld, active: "database" });
 }
 
 // ---------- guides ----------
@@ -660,9 +663,146 @@ ${SUF ? `  <script>window.GPU_ATLAS_LINK_SUFFIX=${JSON.stringify(SUF)};</script>
   if (SUF) html = html.replace('href="guides/"', `href="guides/${SUF}"`).replace('href="gpu-finder/"', `href="gpu-finder/${SUF}"`);
   // crawlable index of every spec sheet
   const groups = BRANDS.map((b) => `<div><h3><a href="brands/${brandSlug(b)}/${SUF}">${b}</a></h3><p>${LIST.filter((g) => g.brand === b).map((g) => `<a href="gpu/${g.id}/${SUF}">${esc(g.name)}</a>`).join(" · ")}</p></div>`).join("");
-  const allIndex = `  <section class="container all-index" aria-label="All spec sheets"><h2>All spec sheets</h2>${groups}<p><a href="gpu-finder/${SUF}">GPU finder</a> · <a href="guides/${SUF}">Guides</a> · <a href="compare/${SUF}">Head-to-head comparisons</a></p></section>\n`;
+  const allIndex = `  <section class="container all-index" aria-label="All spec sheets"><h2>All spec sheets</h2>${groups}<p><a href="gpu-finder/${SUF}">GPU finder</a> · <a href="guides/${SUF}">Guides</a> · <a href="compare/${SUF}">Head-to-head comparisons</a> · <a href="architectures/${SUF}">Architectures</a> · <a href="glossary/${SUF}">Glossary</a> · <a href="about/${SUF}">About</a></p><h3>Series</h3><p>${SERIES.map((x) => `<a href="series/${x.slug}/${SUF}">${esc(x.brand === "Apple" ? "Apple " + x.series : x.series)}${x.seg === "laptop" && !/laptop/i.test(x.series) ? " laptop" : ""}</a>`).join(" · ")}</p></section>\n`;
   html = html.replace("  <div class=\"tray\"", allIndex + "  <div class=\"tray\"");
   return html;
+}
+
+// ---------- SEO: static architecture, series, glossary, about and VRAM pages ----------
+const slug = (x) => String(x).toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const archSlug = (name, brand) => slug(name.startsWith(brand) || brand === "Apple" ? name : `${brand} ${name}`);
+const ARCH_LIST = D.ARCHS.map((a) => ({ ...a, slug: archSlug(a.name, a.brand), items: LIST.filter((g) => g.arch === a.name && (g.brand === a.brand || (a.brand === "NVIDIA" && g.brand === "NVIDIA"))) })).filter((a) => a.items.length);
+const archFor = (g) => ARCH_LIST.find((a) => a.items.includes(g));
+const SERIES = (() => { const m = new Map(); LIST.forEach((g) => { const k = `${g.brand}|${g.series}|${g.seg}`; if (!m.has(k)) m.set(k, { brand: g.brand, series: g.series, seg: g.seg, items: [] }); m.get(k).items.push(g); });
+  const out = [...m.values()].filter((x) => x.items.length >= 2); const used = new Set();
+  out.forEach((x) => { let sl = slug(`${x.series.toLowerCase().startsWith(x.brand.toLowerCase()) ? "" : x.brand + " "}${x.series}${["laptop"].includes(x.seg) && !/laptop/i.test(x.series) ? " laptop" : ""}`); while (used.has(sl)) sl += "-" + x.seg; used.add(sl); x.slug = sl; }); return out; })();
+const seriesFor = (g) => SERIES.find((x) => x.items.includes(g));
+const crumbsLd = (items) => ({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items.map(([n, u], i) => ({ "@type": "ListItem", position: i + 1, name: n, item: u })) });
+
+function seriesPage(x) {
+  const depth = 2, p = up(depth), canonical = `${SITE}/series/${x.slug}/`;
+  const items = x.items.slice().sort((a, b) => (b.msrp || 0) - (a.msrp || 0) || (b.launch || "").localeCompare(a.launch || ""));
+  const dates = items.map((g) => g.launch).filter((d) => /^\d{4}/.test(d || "")).sort();
+  const prices = items.map((g) => g.msrp).filter(Boolean);
+  const mems = items.map(memNum).filter(Boolean);
+  const name = x.brand === "Apple" ? `Apple ${x.series} chips` : `${x.brand} ${x.series.replace(new RegExp("^" + x.brand + " ", "i"), "")} ${D.SEGMENTS[x.seg].toLowerCase()}`;
+  const lead = `The ${name} family has ${items.length} models${dates.length ? `, launched ${fmtDate(dates[0])}${dates.length > 1 && dates[0] !== dates[dates.length - 1] ? ` to ${fmtDate(dates[dates.length - 1])}` : ""}` : ""}${prices.length > 1 ? `, at US launch prices from ${money(Math.min(...prices), "US")} to ${money(Math.max(...prices), "US")}` : ""}${mems.length > 1 && Math.min(...mems) !== Math.max(...mems) ? `, with ${Math.min(...mems)} GB to ${Math.max(...mems)} GB of memory` : ""}.`;
+  const arch = archFor(items[0]);
+  const link = (g) => `${p}gpu/${g.id}/${SUF}`;
+  const ladder = items[0].msrp ? ladderChart(items.find((g) => g.msrp), link).replace(/<h3>Price ladder:[^<]*<\/h3>/, "<h3>US launch prices</h3>").replace(/class="m-hi"/g, 'class="m-s1"').replace(/class="t1 b"/g, 'class="t1"').replace(/<g class="row">/, '<a href="' + link(items.find((g) => g.msrp)) + '"><g class="row">').replace(/(<\/g>)(<a href|<\/svg>)/, "$1</a>$2").replace('<figure class="viz">', '<figure class="viz" style="max-width:760px">') : "";
+  const body = `<nav class="crumbs" aria-label="Breadcrumb"><a href="${dir(p) || "./"}">Database</a> / <a href="${dir(p + "brands/" + brandSlug(x.brand) + "/")}">${esc(x.brand)}</a> / Series</nav>
+    <div class="page-head"><h1>${esc(name)}: every model compared</h1><p class="lead">${esc(lead)}${arch ? ` Architecture: <a href="${dir(p + "architectures/" + arch.slug + "/")}">${esc(arch.name)}</a>.` : ""}</p></div>
+    <div class="section">${tableRows(items, [colModel, colLaunch, colCores, colMem, colBw, colPower, colUS], depth)}</div>
+    ${ladder ? `<div class="section">${ladder}</div>` : ""}
+    <p class="sub">Not sure which to buy? Try the <a href="${dir(p + "gpu-finder/")}">GPU finder</a>.</p>`;
+  return layout({ title: `${name}: specs and prices of all ${items.length} models — GPU Atlas`, desc: `${lead} Compare specs, memory, power and launch prices side by side.`, canonical, depth, body, og: null, active: "database",
+    jsonld: [{ "@context": "https://schema.org", "@type": "ItemList", name, numberOfItems: items.length, itemListElement: items.map((g, i) => ({ "@type": "ListItem", position: i + 1, url: gpuUrl(g.id), name: g.name })) },
+      crumbsLd([["GPU database", `${SITE}/`], [x.brand, `${SITE}/brands/${brandSlug(x.brand)}/`], [name, canonical]])] });
+}
+
+function archPage(a) {
+  const depth = 2, p = up(depth), canonical = `${SITE}/architectures/${a.slug}/`;
+  const items = a.items.slice().sort((x, y) => (y.launch || "").localeCompare(x.launch || "") || (y.msrp || 0) - (x.msrp || 0));
+  const segs = [...new Set(items.map((g) => g.seg))];
+  const body = `<nav class="crumbs" aria-label="Breadcrumb"><a href="${dir(p) || "./"}">Database</a> / <a href="${dir(p + "architectures/")}">Architectures</a></nav>
+    <div class="page-head"><h1>${esc(a.brand === "Apple" || a.name.startsWith(a.brand) ? a.name : a.brand + " " + a.name)} architecture</h1>
+    <p class="lead">${esc(a.key)}</p>
+    <dl class="arch-facts"><div><dt>Introduced</dt><dd>${esc(a.year)}</dd></div><div><dt>Process</dt><dd>${esc(a.process)}</dd></div>${a.namesake && a.namesake !== "—" ? `<div><dt>Named after</dt><dd>${esc(a.namesake)}</dd></div>` : ""}<div><dt>Products in database</dt><dd>${items.length}</dd></div></dl></div>
+    ${segs.map((sg) => `<div class="section"><h2>${esc(D.SEGMENTS[sg])}</h2>${tableRows(items.filter((g) => g.seg === sg), [colModel, colLaunch, colCores, colMem, colBw, colPower, colUS], depth)}</div>`).join("")}`;
+  const title = `${a.brand === "Apple" || a.name.startsWith(a.brand) ? a.name : a.brand + " " + a.name} architecture: GPUs, specs and launch dates`;
+  return layout({ title: `${title} — GPU Atlas`, desc: `${a.key} All ${items.length} ${a.name} products with specifications and launch prices.`, canonical, depth, body, og: null, active: "architectures",
+    jsonld: crumbsLd([["GPU database", `${SITE}/`], ["Architectures", `${SITE}/architectures/`], [a.name, canonical]]) });
+}
+function archIndex() {
+  const depth = 1, p = up(depth);
+  const brands = [...new Set(ARCH_LIST.map((a) => a.brand))];
+  const body = `<div class="page-head"><h1>GPU architectures</h1><p class="lead">Every GPU architecture in the database, newest first, with what changed in each generation.</p></div>
+    ${brands.map((b) => `<div class="section"><h2>${esc(b)}</h2><ul class="guide-list">${ARCH_LIST.filter((a) => a.brand === b).sort((x, y) => String(y.year).localeCompare(String(x.year))).map((a) => `<li><a href="${dir(p + "architectures/" + a.slug + "/")}">${esc(a.name)}</a><span class="sub">${esc(a.year)} · ${esc(a.process)} · ${a.items.length} products. ${esc(a.key)}</span></li>`).join("")}</ul></div>`).join("")}`;
+  return layout({ title: "GPU architectures: NVIDIA, AMD, Intel and Apple generations — GPU Atlas", desc: "NVIDIA Blackwell, Ada and Ampere, AMD RDNA and CDNA, Intel Xe and Apple M-series GPU architectures, with every product in each.", canonical: `${SITE}/architectures/`, depth, body, og: null, active: "architectures" });
+}
+
+function glossaryPage() {
+  const depth = 1;
+  const items = D.GLOSSARY.map(([t, d]) => ({ t, d, id: slug(t) }));
+  const body = `<div class="page-head"><h1>GPU glossary</h1><p class="lead">Plain-language definitions of the terms used on spec sheets, from CUDA cores and Infinity Cache to memory bandwidth and TOPS.</p></div>
+    <nav class="toc">${items.map((x) => `<a href="#${x.id}">${esc(x.t)}</a>`).join("")}</nav>
+    <dl class="glossary">${items.map((x) => `<div id="${x.id}"><dt>${esc(x.t)}</dt><dd>${esc(x.d)}</dd></div>`).join("")}</dl>`;
+  return layout({ title: "GPU glossary: CUDA cores, Tensor Cores, VRAM, bandwidth and more — GPU Atlas", desc: "What GPU spec-sheet terms mean: CUDA cores, stream processors, Tensor Cores, RT cores, Infinity Cache, memory bandwidth, TOPS and more.", canonical: `${SITE}/glossary/`, depth, body, og: null, active: "glossary",
+    jsonld: { "@context": "https://schema.org", "@type": "DefinedTermSet", name: "GPU glossary", hasDefinedTerm: items.map((x) => ({ "@type": "DefinedTerm", name: x.t, description: x.d, url: `${SITE}/glossary/#${x.id}` })) } });
+}
+
+function aboutPage() {
+  const depth = 1, p = up(depth);
+  const nSrc = Object.values(D.SOURCES).filter((x) => x.u).length, nChecked = LIST.filter((g) => g.checked).length;
+  const body = `<div class="page-head"><h1>About GPU Atlas</h1><p class="lead">GPU Atlas is an independent reference for graphics processors: what each one is, what it cost at launch in your country, and what it sells for now.</p></div>
+    <div class="prose">
+    <h2>Who runs it</h2><p>GPU Atlas was founded by Gaurav Kumar in India. It is not owned, funded or sponsored by NVIDIA, AMD, Intel, Apple or any retailer. If that ever changes, it will be stated on this page and on any affected page.</p>
+    <h2>Where the numbers come from</h2><p>Specifications come from manufacturers' own spec pages, datasheets and press releases wherever they exist, and from named reviews or launch coverage when the official page is gone. Each spec sheet lists its sources and the date its figures were last checked; ${nChecked} of ${LIST.length} products have been checked against a source, and the site links to ${nSrc} sources in all.</p>
+    <h2>Prices</h2><p>Launch prices are the official prices a manufacturer announced for a country; we never convert currencies. Street prices are dated snapshots of the lowest new-card price reported by a named tracker and are refreshed monthly. Apple does not sell its GPUs separately, so Apple chips have no price.</p>
+    <h2>Performance</h2><p>GPU Atlas does not run benchmarks or copy other sites' benchmark results. Spec sheets link to independent reviews instead, and the <a href="${dir(p + "gpu-finder/")}">GPU finder</a> explains exactly how it ranks cards.</p>
+    <h2>Corrections</h2><p>Every spec sheet has a "Report an error" link that opens a public issue on <a href="${esc(D.REPO)}/issues" rel="noopener">GitHub</a>. Corrections are made as soon as they are confirmed against a source, and the change history is public in the <a href="${esc(D.REPO)}/commits/main" rel="noopener">repository</a>.</p>
+    </div>`;
+  return layout({ title: "About GPU Atlas: independent sources, prices and corrections — GPU Atlas", desc: "Who runs GPU Atlas, where its specifications and prices come from, how street prices are tracked, and how to report an error.", canonical: `${SITE}/about/`, depth, body, og: null, active: "methodology",
+    jsonld: { "@context": "https://schema.org", "@type": "AboutPage", url: `${SITE}/about/`, name: "About GPU Atlas", publisher: { "@type": "Organization", name: "GPU Atlas", url: `${SITE}/`, founder: { "@type": "Person", name: "Gaurav Kumar" } } } });
+}
+
+// LLM memory guide: weights + ~20% for context cache and runtime (rule of thumb, stated on the page)
+const LLM_SIZES = [[3, "3B"], [8, "7–8B"], [14, "13–14B"], [32, "27–32B"], [70, "70B"], [120, "~120B"], [405, "405B"]];
+const LLM_FORMATS = [["4-bit (Q4)", 0.56], ["8-bit", 1.06], ["16-bit (FP16/BF16)", 2.0]];
+const llmGB = (b, bytes) => Math.ceil(b * bytes * 1.2);
+function vramCards(minGB) {
+  const pool = LIST.filter((g) => g.status === "current" && ["desktop", "pro", "systems"].includes(g.seg) && !/laptop/i.test(g.name) && memNum(g) && memNum(g) >= minGB).sort((a, b) => memNum(a) - memNum(b) || (a.msrp || 1e9) - (b.msrp || 1e9));
+  return pool.slice(0, 4);
+}
+GUIDES.push({
+  slug: "how-much-vram-do-i-need",
+  title: "How much VRAM do you need in 2026? Gaming, editing and AI",
+  short: "Graphics memory needed for 1080p, 1440p and 4K gaming, video editing and local AI, with current cards at each level.",
+  build() {
+    const tier = (gb, label, why) => { const c = LIST.filter((g) => g.status === "current" && g.seg === "desktop" && memNum(g) === gb && g.msrp).sort((a, b) => a.msrp - b.msrp);
+      return `<tr><td><b>${gb} GB</b></td><td style="white-space:normal">${label}</td><td style="white-space:normal" class="sub">${why}</td><td style="white-space:normal">${c.slice(0, 4).map((g) => `<a href="../../gpu/${g.id}/${SUF}">${esc(shortName(g.name))}</a>`).join(", ") || "—"}</td></tr>`; };
+    return `<p class="lead">Graphics memory (VRAM) holds textures, the frame being drawn and, for AI, the model itself. Running out causes stutter in games and stops AI models from loading at all, so it is the first spec to check.</p>
+      <div class="section"><h2>Quick answer</h2><div class="table-wrap"><table class="data"><thead><tr><th>Memory</th><th>Good for</th><th>Why</th><th>Current cards</th></tr></thead><tbody>
+      ${tier(8, "1080p gaming at medium to high settings; esports", "Several 2025–26 games exceed 8 GB at high settings, causing stutter or blurry textures.")}
+      ${tier(12, "1080p maxed out and 1440p gaming; photo and 1080p video editing", "Comfortable headroom at 1440p today; ray tracing and frame generation add to memory use.")}
+      ${tier(16, "1440p with ray tracing, 4K gaming, 4K video editing, small AI models", "The safe choice for a card you want to keep for several years.")}
+      ${tier(24, "4K with everything on, 3D rendering, 13–30B AI models", "Mostly previous-generation flagships and workstation cards.")}
+      ${tier(32, "8K video, large 3D scenes, 30B+ AI models at higher quality", "Flagship and workstation territory.")}
+      </tbody></table></div></div>
+      <div class="section"><h2>Running AI models locally</h2><p>For local language models, memory decides which model you can run. See the <a href="../vram-for-local-llms/${SUF}">VRAM guide for local LLMs</a> for model-by-model numbers.</p></div>
+      <div class="section"><h2>Find a card</h2><p>The <a href="../../gpu-finder/${SUF}">GPU finder</a> applies these memory levels automatically and flags cards that fall short.</p></div>`;
+  }
+});
+GUIDES.push({
+  slug: "vram-for-local-llms",
+  title: "How much VRAM do you need to run LLMs locally?",
+  short: "Estimated GPU memory for 3B to 405B language models at 4-bit, 8-bit and 16-bit precision, with current GPUs and Macs that fit.",
+  build() {
+    const head = `<tr><th>Model size</th>${LLM_FORMATS.map(([f]) => `<th>${f}</th>`).join("")}</tr>`;
+    const rows = LLM_SIZES.map(([b, l]) => `<tr><td><b>${l}</b></td>${LLM_FORMATS.map(([, by]) => `<td class="num">~${llmGB(b, by)} GB</td>`).join("")}</tr>`).join("");
+    const fit = LLM_SIZES.slice(0, 6).map(([b, l]) => { const need = llmGB(b, 0.56); const c = vramCards(need);
+      return `<tr><td><b>${l}</b> at 4-bit</td><td class="num">~${need} GB</td><td style="white-space:normal">${c.map((g) => `<a href="../../gpu/${g.id}/${SUF}">${esc(shortName(g.name))}</a> <span class="sub">${memNum(g)} GB</span>`).join(", ") || "Multiple GPUs or a server"}</td></tr>`; }).join("");
+    return `<p class="lead">A language model has to fit in memory to run at full speed. The rule of thumb: <b>memory ≈ parameters × bytes per parameter, plus about 20%</b> for the context cache and runtime. Longer contexts need more.</p>
+      <div class="section"><h2>Estimated memory by model size</h2><div class="table-wrap"><table class="data"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
+      <p class="sub" style="margin-top:8px">Estimates: 4-bit uses about 0.56 bytes per parameter (typical Q4 formats), 8-bit about 1.06, 16-bit 2. Mixture-of-experts models must still fit all their parameters in memory, even though only some are active per token.</p></div>
+      <div class="section"><h2>Current GPUs and Macs that fit</h2><div class="table-wrap"><table class="data"><thead><tr><th>Model</th><th>Needs</th><th>Smallest current options</th></tr></thead><tbody>${fit}</tbody></table></div>
+      <p class="sub" style="margin-top:8px">Apple Macs share one pool of unified memory between CPU and GPU, so a large share of it is available to models; leave room for the system. Memory bandwidth decides how fast text is generated: compare it on each spec sheet.</p></div>
+      <div class="section"><p>Want a shortlist for your budget? Choose "Local AI" in the <a href="../../gpu-finder/${SUF}">GPU finder</a>.</p></div>`;
+  }
+});
+
+// Visible FAQ for each spec sheet (answers built only from the data on the page)
+function faqFor(g) {
+  const q = [], s = g.specs, nm = g.name, mem = memText(g);
+  if (mem) q.push([`How much memory does the ${nm} have?`, `The ${nm} has ${mem}${typeof s.mem === "number" && s.memType ? ` of ${s.memType.split(" (")[0]}` : ""}${s.bus ? ` on a ${s.bus}-bit bus` : ""}${typeof s.bw === "number" ? `, giving ${fmtBw(s.bw)} of bandwidth` : ""}.`]);
+  if (priceIn(g, "IN") != null) q.push([`What is the ${nm} price in India?`, `The official launch price in India was ${money(priceIn(g, "IN"), "IN")}. Retail prices change; check a current listing before buying.`]);
+  if (g.msrp) { const others = COUNTRIES.filter((c) => c.code !== "US" && priceIn(g, c.code) != null).map((c) => `${money(priceIn(g, c.code), c.code)} in ${c.name}`);
+    q.push([`What was the ${nm} launch price?`, `${money(g.msrp, "US")} in the United States${others.length ? `, ${others.slice(0, 4).join(", ")}` : ""}.`]); }
+  const us = (g.street || []).find((r) => r.c === "US");
+  if (us) q.push([`How much does the ${nm} cost now?`, `The lowest new price reported on ${fmtDate(us.date)} was ${money(us.v, "US")} in the US${g.msrp ? `, ${pct(us.v, g.msrp) > 0 ? "+" : ""}${pct(us.v, g.msrp)}% from launch` : ""}.`]);
+  if (typeof s.power === "number" && g.seg === "desktop") q.push([`What power supply do I need for the ${nm}?`, `The ${nm} is rated at ${s.power} W. As a rule of thumb, allow about 250 W for the rest of the PC, so a ${Math.ceil((s.power + 250) / 50) * 50} W or larger supply; follow the card maker's recommendation for your specific model.`]);
+  if (g.launch && /^\d{4}/.test(g.launch)) q.push([`When was the ${nm} released?`, `${fmtDate(g.launch)}.`]);
+  return q.slice(0, 5);
 }
 
 // ---------- build ----------
@@ -681,6 +821,12 @@ write("compare/index.html", vsIndex());
 for (const v of VS) write(`compare/${v.slug}/index.html`, vsPage(v));
 for (const b of BRANDS) write(`brands/${brandSlug(b)}/index.html`, brandPage(b));
 write("gpu-finder/index.html", finderPage());
+write("architectures/index.html", archIndex());
+for (const a of ARCH_LIST) write(`architectures/${a.slug}/index.html`, archPage(a));
+for (const x of SERIES) write(`series/${x.slug}/index.html`, seriesPage(x));
+write("glossary/index.html", glossaryPage());
+write("about/index.html", aboutPage());
+write(`${INDEXNOW_KEY}.txt`, INDEXNOW_KEY);
 for (const gd of GUIDES) write(`guides/${gd.slug}/index.html`, guidePage(gd));
 write("404.html", layout({ title: "Page not found — GPU Atlas", desc: "This page does not exist.", canonical: `${SITE}/`, depth: 0, body: `<div class="page-head"><h1>Page not found</h1><p class="lead">That page doesn't exist. Try the <a href="${SITE}/">GPU database</a> or the <a href="${SITE}/guides/">guides</a>.</p></div>`, active: "" })
   .replace(/href="assets\//g, `href="${SITE}/assets/`).replace(/href="\.\/"/g, `href="${SITE}/"`).replace(/href="#/g, `href="${SITE}/#`).replace(/href="guides\//g, `href="${SITE}/guides/`));
@@ -693,10 +839,15 @@ const urls = [
   { loc: `${SITE}/compare/`, lastmod: BUILD_DATE, pr: "0.7" },
   ...VS.map((v) => ({ loc: `${SITE}/compare/${v.slug}/`, lastmod: BUILD_DATE, pr: "0.7" })),
   ...BRANDS.map((b) => ({ loc: `${SITE}/brands/${brandSlug(b)}/`, lastmod: BUILD_DATE, pr: "0.8" })),
+  { loc: `${SITE}/architectures/`, lastmod: BUILD_DATE, pr: "0.6" },
+  ...ARCH_LIST.map((a) => ({ loc: `${SITE}/architectures/${a.slug}/`, lastmod: BUILD_DATE, pr: "0.6" })),
+  ...SERIES.map((x) => ({ loc: `${SITE}/series/${x.slug}/`, lastmod: BUILD_DATE, pr: "0.7" })),
+  { loc: `${SITE}/glossary/`, lastmod: BUILD_DATE, pr: "0.5" },
+  { loc: `${SITE}/about/`, lastmod: BUILD_DATE, pr: "0.5" },
   ...LIST.map((g) => ({ loc: gpuUrl(g.id), lastmod: g.checked || BUILD_DATE, pr: g.status === "current" ? "0.9" : "0.6" }))
 ];
 write("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${xml(u.loc)}</loc><lastmod>${u.lastmod}</lastmod><priority>${u.pr}</priority></url>`).join("\n")}\n</urlset>\n`);
 write("CNAME", SITE.replace(/^https?:\/\//, "") + "\n");
 write("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
 
-console.log(`Built ${LIST.length} product pages, ${GUIDES.length} guides, ${VS.length} comparisons, ${BRANDS.length} brand pages, GPU finder, ${pngs} preview images, ${urls.length} sitemap URLs → dist/ (site: ${SITE}${SUF ? `, link suffix "${SUF}"` : ""})`);
+console.log(`Built ${LIST.length} product pages, ${GUIDES.length} guides, ${VS.length} comparisons, ${BRANDS.length} brand pages, ${SERIES.length} series, ${ARCH_LIST.length} architectures, GPU finder, ${pngs} preview images, ${urls.length} sitemap URLs → dist/ (site: ${SITE}${SUF ? `, link suffix "${SUF}"` : ""})`);
