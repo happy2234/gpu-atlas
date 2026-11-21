@@ -385,6 +385,8 @@ fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 copyDir(path.join(ROOT, "assets"), path.join(OUT, "assets"));
 fs.writeFileSync(path.join(OUT, ".nojekyll"), "");
+// Site-ownership files (Google Search Console, Bing) dropped in the repo root are published as-is.
+for (const f of fs.readdirSync(ROOT)) if (/^google[0-9a-f]+\.html$|^BingSiteAuth\.xml$|^yandex_[0-9a-f]+\.html$/.test(f)) fs.copyFileSync(path.join(ROOT, f), path.join(OUT, f));
 const pngs = process.env.SKIP_IMAGES ? 0 : renderPngs();
 write("index.html", indexHtml());
 for (const g of LIST) write(`gpu/${g.id}/index.html`, productPage(g));
