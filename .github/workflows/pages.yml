@@ -15,10 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,13 +36,31 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
+  deploy:
+    # Separate job: the upload is registered before publishing starts, and
+    # "Re-run failed jobs" retries only this step with the same upload.
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Notify Bing and Yandex (IndexNow)
         continue-on-error: true
         run: |
           sleep 60
-          URLS=$(grep -o '<loc>[^<]*</loc>' dist/sitemap.xml | sed 's#</\?loc>##g' | head -10000 | jq -R . | jq -s .)
+          URLS=$(curl -s https://gpuatlas.in/sitemap.xml | grep -o '<loc>[^<]*</loc>' | sed 's#</\?loc>##g' | head -10000 | jq -R . | jq -s .)
+          if [ "$URLS" = "[]" ] || [ -z "$URLS" ]; then echo "Sitemap not reachable at gpuatlas.in yet; skipping"; exit 0; fi
           jq -n --argjson urls "$URLS" '{host:"gpuatlas.in", key:"5f3c9a1e7b2d4c8a9e6f0b1d2c3a4e5f", keyLocation:"https://gpuatlas.in/5f3c9a1e7b2d4c8a9e6f0b1d2c3a4e5f.txt", urlList:$urls}' > indexnow.json
           curl -s -o /dev/null -w "IndexNow HTTP %{http_code}\n" -X POST https://api.indexnow.org/indexnow -H "Content-Type: application/json; charset=utf-8" --data @indexnow.json
