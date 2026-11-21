@@ -47,7 +47,7 @@ function hasOg(id) { return fs.existsSync(path.join(OUT, "og", `${id}.png`)); }
 
 function layout({ title, desc, canonical, depth, body, og, jsonld, active }) {
   const p = up(depth);
-  const nav = [["Database", dir(p) || "./", "database"], ["Compare", `${dir(p)}#compare`, "compare"], ["Guides", dir(`${p}guides/`), "guides"], ["Architectures", `${dir(p)}#architectures`, "architectures"], ["Glossary", `${dir(p)}#glossary`, "glossary"], ["Sources", `${dir(p)}#methodology`, "methodology"]];
+  const nav = [["Database", dir(p) || "./", "database"], ["Compare", `${dir(p)}#compare`, "compare"], ["GPU finder", dir(`${p}gpu-finder/`), "finder"], ["Guides", dir(`${p}guides/`), "guides"], ["Architectures", `${dir(p)}#architectures`, "architectures"], ["Glossary", `${dir(p)}#glossary`, "glossary"], ["Sources", `${dir(p)}#methodology`, "methodology"]];
   const ogImg = og ? `${SITE}/og/${og}.png` : `${SITE}/og/default.png`;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -166,7 +166,7 @@ function productPage(g) {
   const ks = keyStats(g);
 
   const body = `
-      <nav class="crumbs" aria-label="Breadcrumb"><a href="${dir(p) || "./"}">Database</a> / ${esc(D.SEGMENTS[g.seg])} / ${esc(g.series)}</nav>
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="${dir(p) || "./"}">Database</a> / <a href="${dir(p + "brands/" + brandSlug(g.brand) + "/")}">${esc(g.brand)}</a> / ${esc(D.SEGMENTS[g.seg])} / ${esc(g.series)}</nav>
       <div class="detail-head">
         <div>
           <p class="eyebrow">${esc(g.brand)} · ${esc(D.SEGMENTS[g.seg])} · ${esc(g.arch)}</p>
@@ -192,6 +192,7 @@ function productPage(g) {
         <aside>
           ${siblings.length > 1 ? `<div class="panel"><h3>${esc(g.series)} family</h3><ul>${siblings.map((x) => `<li class="${x === g ? "here" : ""}">${x === g ? esc(x.name) : `<a href="${link(x)}">${esc(x.name)}</a>`}</li>`).join("")}</ul></div>` : ""}
           ${similar.length ? `<div class="panel"><h3>Similar launch price</h3><ul>${similar.map((x) => `<li><a href="${link(x)}">${esc(x.name)}</a> <span class="sub">${esc(money(x.msrp, "US"))}</span></li>`).join("")}</ul></div>` : ""}
+          ${vsFor(g).length ? `<div class="panel"><h3>Head-to-head</h3><ul>${vsFor(g).map((v) => `<li><a href="${dir(p + "compare/" + v.slug + "/")}">${esc(vsName(v))}</a></li>`).join("")}</ul></div>` : ""}
           ${g.reviews && g.reviews.length ? `<div class="panel"><h3>Independent reviews</h3><ul>${g.reviews.map((r) => `<li class="src"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.outlet)}</a></li>`).join("")}</ul><p class="sub" style="margin-top:6px">For performance, read these rather than spec sheets. GPU Atlas does not copy benchmark results.</p></div>` : ""}
           <div class="panel"><h3>Sources</h3><ul>${sources.length ? sources.map((src) => `<li class="src">${src.u ? `<a href="${esc(src.u)}" target="_blank" rel="noopener">${esc(src.t)}</a>` : esc(src.t)}</li>`).join("") : "<li class='src'>Launch specifications</li>"}</ul></div>
         </aside>
@@ -202,10 +203,11 @@ function productPage(g) {
       </nav>`;
 
   const jsonld = [
-    { "@context": "https://schema.org", "@type": "Product", name: g.name, brand: { "@type": "Brand", name: g.brand }, category: D.SEGMENTS[g.seg], description: g.summary || describe(g), url: canonical, ...(hasOg(g.id) ? { image: `${SITE}/og/${g.id}.png` } : {}) },
+    { "@context": "https://schema.org", "@type": "WebPage", name: `${g.name} specifications`, description: g.summary || describe(g), url: canonical, dateModified: g.checked || BUILD_DATE, about: { "@type": "Thing", name: g.name, description: `${g.brand} ${D.SEGMENTS[g.seg]}` }, ...(hasOg(g.id) ? { primaryImageOfPage: `${SITE}/og/${g.id}.png` } : {}) },
     { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
       { "@type": "ListItem", position: 1, name: "GPU database", item: `${SITE}/` },
-      { "@type": "ListItem", position: 2, name: g.name, item: canonical }
+      { "@type": "ListItem", position: 2, name: g.brand, item: `${SITE}/brands/${brandSlug(g.brand)}/` },
+      { "@type": "ListItem", position: 3, name: g.name, item: canonical }
     ] }
   ];
   return layout({ title: `${g.name} specs, price & variants — GPU Atlas`, desc: describe(g), canonical, depth, body, og: hasOg(g.id) ? g.id : null, jsonld, active: "database" });
@@ -301,6 +303,191 @@ function timelineChart(depth) {
   const table = `<details class="viz-table"><summary>Show the data as a table</summary>${tableRows(pts.slice().sort((a, b) => a.launch < b.launch ? -1 : 1), [colModel, colLaunch, colUS], depth)}</details>`;
   return `<figure class="viz">${legend}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="US launch price of desktop graphics cards by launch date and brand, logarithmic price scale"><line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" class="axis"/>${grid}${marks}</svg>
     <figcaption class="sub">Each mark is one desktop card at its official US launch price; the price axis is logarithmic so budget and flagship cards are both readable. Hover a mark for details, or select it to open the spec sheet. Apple chips are not included because Apple does not sell its GPUs separately.</figcaption>${table}</figure>`;
+}
+
+
+// ---------- SEO: head-to-head comparison pages ----------
+const memNum = (g) => { const m = g.specs.mem; if (typeof m === "number") return m; const x = String(m || "").match(/(\d+)\s*GB/); return x ? Number(x[1]) : null; };
+const VS = (() => {
+  const pool = LIST.filter((g) => g.seg === "desktop" && g.msrp && ["current", "previous"].includes(g.status));
+  const seen = new Set(), pairs = [];
+  const add = (a, b) => { const [x, y] = [a, b].sort((p, q) => (p.brand + p.id < q.brand + q.id ? -1 : 1)); const k = `${x.id}-vs-${y.id}`; if (!seen.has(k)) { seen.add(k); pairs.push({ slug: k, a: x, b: y }); } };
+  for (const g of pool.filter((x) => x.status === "current")) {
+    // closest-priced current card from each other brand, and the next card up/down in its own family
+    for (const b of ["NVIDIA", "AMD", "Intel"].filter((x) => x !== g.brand)) {
+      const r = pool.filter((x) => x.brand === b && x.status === "current").sort((p, q) => Math.abs(p.msrp - g.msrp) - Math.abs(q.msrp - g.msrp))[0];
+      if (r && Math.abs(r.msrp - g.msrp) / g.msrp <= 0.35) add(g, r);
+    }
+    const fam = pool.filter((x) => x.series === g.series && x.brand === g.brand && x !== g).sort((p, q) => Math.abs(p.msrp - g.msrp) - Math.abs(q.msrp - g.msrp));
+    if (fam[0]) add(g, fam[0]);
+    // its predecessor: same brand, previous status, closest price
+    const prev = pool.filter((x) => x.brand === g.brand && x.status === "previous").sort((p, q) => Math.abs(p.msrp - g.msrp) - Math.abs(q.msrp - g.msrp))[0];
+    if (prev && Math.abs(prev.msrp - g.msrp) / g.msrp <= 0.25) add(g, prev);
+  }
+  return pairs;
+})();
+const vsFor = (g) => VS.filter((v) => v.a === g || v.b === g);
+const vsName = (v) => `${shortName(v.a.name)} vs ${shortName(v.b.name)}`;
+
+function vsPage(v) {
+  const { a, b } = v, depth = 2, p = up(depth), canonical = `${SITE}/compare/${v.slug}/`;
+  const link = (x) => `${p}gpu/${x.id}/${SUF}`;
+  const keys = [["Architecture", (g) => g.arch], ["Launch", (g) => fmtDate(g.launch)], ["US launch price", (g) => g.msrp ? money(g.msrp, "US") : "—"],
+    ...FIELDS.flatMap(([, f]) => f).filter(([k]) => [a, b].some((g) => specVal(g, k) != null && specVal(g, k) !== "")).map(([k, l]) => [l, (g) => { const x = specVal(g, k); return x == null || x === "" ? "—" : fmtField(k, x); }])];
+  const rows = keys.map(([l, f]) => { const va = String(f(a)), vb = String(f(b)); const d = va !== vb && va !== "—" && vb !== "—" ? " diff" : ""; return `<tr><th scope="row">${esc(l)}</th><td class="${cls(va)}${d}">${esc(va)}</td><td class="${cls(vb)}${d}">${esc(vb)}</td></tr>`; }).join("");
+  const priceRows = COUNTRIES.filter((c) => priceIn(a, c.code) != null || priceIn(b, c.code) != null).map((c) => `<tr><th scope="row">${esc(c.name)}</th><td class="num">${priceCell(a, c.code)}</td><td class="num">${priceCell(b, c.code)}</td></tr>`).join("");
+  const facts = [];
+  const ma = memNum(a), mb = memNum(b);
+  if (a.msrp && b.msrp && a.msrp !== b.msrp) { const [c, e] = a.msrp < b.msrp ? [a, b] : [b, a]; facts.push(`${shortName(c.name)} launched at ${money(c.msrp, "US")} in the US, ${money(e.msrp - c.msrp, "US")} less than the ${shortName(e.name)} (${money(e.msrp, "US")}).`); }
+  if (ma && mb && ma !== mb) { const [m, n] = ma > mb ? [a, b] : [b, a]; facts.push(`${shortName(m.name)} has more graphics memory: ${memNum(m)} GB against ${memNum(n)} GB. More memory helps at higher resolutions, with ray tracing and for local AI models.`); }
+  if (a.specs.bw && b.specs.bw && a.specs.bw !== b.specs.bw) { const [m, n] = a.specs.bw > b.specs.bw ? [a, b] : [b, a]; facts.push(`${shortName(m.name)} has ${Math.round((m.specs.bw / n.specs.bw - 1) * 100)}% more memory bandwidth (${fmtBw(m.specs.bw)} vs ${fmtBw(n.specs.bw)}).`); }
+  if (typeof a.specs.power === "number" && typeof b.specs.power === "number" && a.specs.power !== b.specs.power) { const [m, n] = a.specs.power > b.specs.power ? [a, b] : [b, a]; facts.push(`${shortName(m.name)} is rated for more power: ${m.specs.power} W against ${n.specs.power} W.`); }
+  if (a.brand !== b.brand) facts.push(`Core counts are not comparable across brands (${coreLabel(a) || "cores"} vs ${coreLabel(b) || "cores"}), so use the independent reviews below for gaming and application performance.`);
+  const rev = (g) => (g.reviews || []).map((r) => `<li class="src"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.outlet)}: ${esc(shortName(g.name))} review</a></li>`).join("");
+  const more = VS.filter((x) => x !== v && (x.a === a || x.b === a || x.a === b || x.b === b)).slice(0, 8);
+  const title = `${vsName(v)}: specs and price compared`;
+  const body = `<nav class="crumbs" aria-label="Breadcrumb"><a href="${dir(p) || "./"}">Database</a> / <a href="${dir(p + "compare/")}">Comparisons</a></nav>
+    <div class="page-head"><p class="eyebrow">Head-to-head</p><h1>${esc(a.name)} vs ${esc(b.name)}</h1><div class="meta"><span>Updated ${esc(D.updated)}</span><span>Specifications from official sources</span></div></div>
+    <div class="section"><h2>Key differences</h2><ul class="facts">${facts.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>
+    <div class="section"><h2>Specifications</h2><div class="table-wrap"><table class="data vs"><thead><tr><th></th><th><a href="${link(a)}">${esc(a.name)}</a></th><th><a href="${link(b)}">${esc(b.name)}</a></th></tr></thead><tbody>${rows}</tbody></table></div><p class="sub" style="margin-top:8px">Values in bold differ between the two. A dash means the spec does not apply to that brand.</p></div>
+    ${priceRows ? `<div class="section"><h2>Launch price by country</h2><div class="table-wrap"><table class="data vs"><thead><tr><th></th><th>${esc(shortName(a.name))}</th><th>${esc(shortName(b.name))}</th></tr></thead><tbody>${priceRows}</tbody></table></div></div>` : ""}
+    ${rev(a) || rev(b) ? `<div class="section"><h2>Independent reviews</h2><ul class="plain">${rev(a)}${rev(b)}</ul></div>` : ""}
+    <div class="section"><p>Not sure which to pick? Try the <a href="${dir(p + "gpu-finder/")}">GPU finder</a>. Full spec sheets: <a href="${link(a)}">${esc(a.name)}</a> · <a href="${link(b)}">${esc(b.name)}</a>.</p>
+    ${more.length ? `<p class="sub">More comparisons: ${more.map((x) => `<a href="${dir(p + "compare/" + x.slug + "/")}">${esc(vsName(x))}</a>`).join(" · ")}</p>` : ""}</div>`;
+  return layout({ title: `${title} — GPU Atlas`, desc: `${a.name} vs ${b.name}: side-by-side specifications, memory, bandwidth, power and official launch prices by country, with links to independent reviews.`, canonical, depth, body, og: null, active: "compare",
+    jsonld: [{ "@context": "https://schema.org", "@type": "WebPage", name: title, dateModified: BUILD_DATE, url: canonical },
+      { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "GPU database", item: `${SITE}/` }, { "@type": "ListItem", position: 2, name: "Comparisons", item: `${SITE}/compare/` }, { "@type": "ListItem", position: 3, name: vsName(v), item: canonical }] }] });
+}
+function vsIndex() {
+  const depth = 1, p = up(depth);
+  const byBrand = {}; VS.forEach((v) => { const k = v.a.brand === v.b.brand ? `${v.a.brand} vs ${v.a.brand}` : `${v.a.brand} vs ${v.b.brand}`; (byBrand[k] = byBrand[k] || []).push(v); });
+  const body = `<div class="page-head"><p class="eyebrow">Comparisons</p><h1>Graphics card head-to-heads</h1><p class="lead">Side-by-side specifications and launch prices for cards people most often compare: rivals at a similar price, neighbours in the same family, and each card's predecessor. To compare any combination, use the <a href="${dir(p) || "./"}#compare">compare tool</a>.</p></div>
+    ${Object.entries(byBrand).map(([k, list]) => `<div class="section"><h2>${esc(k)}</h2><ul class="guide-list">${list.map((v) => `<li><a href="${dir(p + "compare/" + v.slug + "/")}">${esc(vsName(v))}</a><span class="sub">${esc(money(v.a.msrp, "US"))} vs ${esc(money(v.b.msrp, "US"))}</span></li>`).join("")}</ul></div>`).join("")}`;
+  return layout({ title: "GPU comparisons: NVIDIA vs AMD vs Intel head-to-heads — GPU Atlas", desc: "Head-to-head comparisons of current graphics cards: specs, memory, power and launch prices side by side.", canonical: `${SITE}/compare/`, depth, body, og: null, active: "compare" });
+}
+
+// ---------- SEO: brand hubs ----------
+const BRANDS = ["NVIDIA", "AMD", "Intel", "Apple"];
+const brandSlug = (b) => b.toLowerCase();
+function brandPage(b) {
+  const depth = 2, p = up(depth), canonical = `${SITE}/brands/${brandSlug(b)}/`;
+  const list = LIST.filter((g) => g.brand === b);
+  const segs = [...new Set(list.map((g) => g.seg))];
+  const intro = { NVIDIA: "GeForce gaming cards, RTX PRO workstation cards, data-center accelerators, DGX systems and Jetson edge modules.", AMD: "Radeon RX gaming cards, Radeon PRO and Radeon AI PRO workstation cards, Instinct accelerators and Ryzen AI Max processors.", Intel: "Arc desktop graphics cards and Arc Pro workstation cards.", Apple: "M-series chips, whose GPUs are built into the chip and shared with the CPU through unified memory. Apple does not sell GPUs separately." }[b];
+  const body = `<nav class="crumbs" aria-label="Breadcrumb"><a href="${dir(p) || "./"}">Database</a> / Brands</nav>
+    <div class="page-head"><p class="eyebrow">Brand</p><h1>Every ${esc(b)} GPU: specs and prices</h1><p class="lead">${list.length} ${esc(b)} products in the database: ${esc(intro)}</p><div class="meta">${BRANDS.filter((x) => x !== b).map((x) => `<a href="${dir(p + "brands/" + brandSlug(x) + "/")}">${x}</a>`).join("")}</div></div>
+    ${segs.map((sg) => `<div class="section"><h2>${esc(D.SEGMENTS[sg])}</h2>${tableRows(list.filter((g) => g.seg === sg).sort((x, y) => (y.launch || "").localeCompare(x.launch || "") || (y.msrp || 0) - (x.msrp || 0)), [colModel, colLaunch, colMem, colBw, colPower, colUS], depth)}</div>`).join("")}`;
+  return layout({ title: `${b} GPU list: every ${b} graphics card and chip with specs & prices — GPU Atlas`, desc: `All ${list.length} ${b} GPUs in GPU Atlas, by segment: launch dates, memory, bandwidth, power and official launch prices.`, canonical, depth, body, og: null, active: "database",
+    jsonld: { "@context": "https://schema.org", "@type": "ItemList", name: `${b} GPUs`, numberOfItems: list.length, itemListElement: list.slice(0, 100).map((g, i) => ({ "@type": "ListItem", position: i + 1, url: gpuUrl(g.id), name: g.name })) } });
+}
+
+
+// ---------- GPU finder (interactive buying guide) ----------
+function finderPage() {
+  const depth = 1, p = up(depth), canonical = `${SITE}/gpu-finder/`;
+  const pick = LIST.filter((g) => g.status === "current" && ((g.seg === "desktop" && g.msrp) || (g.seg === "pro" && Object.keys(g.prices || {}).length) || g.brand === "Apple"));
+  const data = pick.map((g) => ({
+    id: g.id, n: g.name, b: g.brand, seg: g.seg, mem: memNum(g), bw: typeof g.specs.bw === "number" ? g.specs.bw : null,
+    w: typeof g.specs.power === "number" ? g.specs.power : null, us: g.msrp || null, pr: g.prices || {},
+    st: Object.fromEntries((g.street || []).map((r) => [r.c, [r.v, fmtDate(r.date)]])), rv: (g.reviews || []).slice(0, 3).map((r) => [r.outlet, r.url]),
+    gc: g.specs.gcores || null, plat: g.specs.platform || "", u: `${p}gpu/${g.id}/${SUF}`,
+    vs: vsFor(g).slice(0, 2).map((v) => [vsName(v), `${p}compare/${v.slug}/${SUF}`])
+  }));
+  const countries = COUNTRIES.map((c) => ({ c: c.code, n: c.name, sym: money(0, c.code).replace(/0$/, ""), loc: c.cur === "INR" ? "en-IN" : "en-US" }));
+  const body = `<div class="page-head"><p class="eyebrow">GPU finder</p><h1>Which graphics card should I buy?</h1>
+    <p class="lead">Answer five questions and get a shortlist of current cards that fit your use, budget and power supply, with the reasons for each pick and links to independent reviews.</p></div>
+  <div class="finder">
+    <form id="ff" class="finder-form" onsubmit="return false">
+      <fieldset><legend>1. What will you use it for?</legend><div class="chips" data-k="use">
+        <button type="button" data-v="g1080">Gaming at 1080p</button><button type="button" data-v="g1440">Gaming at 1440p</button><button type="button" data-v="g4k">Gaming at 4K</button>
+        <button type="button" data-v="create">Video, 3D &amp; photo editing</button><button type="button" data-v="ai">Local AI / LLMs</button></div></fieldset>
+      <fieldset><legend>2. Which computer?</legend><div class="chips" data-k="plat">
+        <button type="button" data-v="pc">Windows or Linux desktop PC</button><button type="button" data-v="mac">Mac</button></div></fieldset>
+      <fieldset class="pc-only"><legend>3. Your budget for the graphics card</legend>
+        <div class="row"><label>Country <select id="fcc">${countries.map((c) => `<option value="${c.c}">${esc(c.n)}</option>`).join("")}</select></label>
+        <label>Budget <span class="money-in"><span id="fsym">$</span><input id="fbud" type="number" min="0" step="10" inputmode="numeric" placeholder="e.g. 600"></span></label></div>
+        <div class="row"><label class="inline"><input type="checkbox" id="fstreet" checked> Use today's street price where we have one</label></div></fieldset>
+      <fieldset class="pc-only"><legend>4. Brand preference</legend><div class="chips" data-k="brand">
+        <button type="button" data-v="any">No preference</button><button type="button" data-v="NVIDIA">NVIDIA</button><button type="button" data-v="AMD">AMD</button><button type="button" data-v="Intel">Intel</button></div></fieldset>
+      <fieldset class="pc-only"><legend>5. Power supply (optional)</legend>
+        <div class="row"><label>Wattage <select id="fpsu"><option value="">Don't know / will upgrade</option>${[450, 550, 650, 750, 850, 1000, 1200].map((w) => `<option value="${w}">${w} W</option>`).join("")}</select></label></div>
+        <p class="sub">We leave about 250 W for the rest of the PC. Check the card maker's recommended PSU before buying.</p></fieldset>
+    </form>
+    <section id="fres" class="finder-results" aria-live="polite"></section>
+  </div>
+  <div class="section"><h2>How the finder chooses</h2><ul class="facts">
+    <li><b>Memory first.</b> We look for at least 8 GB for 1080p, 12 GB for 1440p and editing, and 16 GB for 4K and local AI. Cards below that are shown with a warning, not hidden.</li>
+    <li><b>Then the highest tier you can afford.</b> Within a brand's current lineup, a higher launch price means a faster card. Across brands we don't claim which is faster: GPU Atlas doesn't copy benchmarks, so each pick links to independent reviews.</li>
+    <li><b>Local AI</b> ranks by memory, then memory bandwidth, and includes workstation cards. <b>Editing</b> gives NVIDIA a small boost because more creative apps support CUDA acceleration.</li>
+    <li><b>Prices</b> are the official launch price in your country, or the dated street price when you tick that box. Prices change; check a retailer before buying.</li></ul></div>
+  <script type="application/json" id="fdata">${JSON.stringify({ cards: data, countries }).replace(/</g, "\\u003c")}</script>
+  <script>
+  (function(){
+    var D=JSON.parse(document.getElementById("fdata").textContent), C={}; D.countries.forEach(function(c){C[c.c]=c;});
+    var st={use:"g1440",plat:"pc",brand:"any",cc:"US",bud:"",street:true,psu:""};
+    try{var h=new URLSearchParams(location.hash.slice(1));h.forEach(function(v,k){if(k in st)st[k]=(k==="street")?v!=="0":v;});}catch(e){}
+    var $=function(id){return document.getElementById(id);};
+    var NEED={g1080:8,g1440:12,g4k:16,create:12,ai:16}, USE={g1080:"1080p gaming",g1440:"1440p gaming",g4k:"4K gaming",create:"video, 3D and photo editing",ai:"local AI and LLMs"};
+    function fmt(v,cc){var c=C[cc];return c.sym+Number(v).toLocaleString(c.loc,{maximumFractionDigits:0});}
+    function esc(s){return String(s).replace(/[&<>"]/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m];});}
+    function price(g){var s=st.street&&g.st[st.cc];if(s)return{v:s[0],kind:"street",date:s[1]};var l=g.pr[st.cc];return l!=null?{v:l,kind:"launch"}:null;}
+    function score(g){var need=NEED[st.use],m=g.mem||0,sc;
+      if(st.use==="ai")sc=m*1000+(g.bw||0);else sc=(g.us||0)*(st.use==="create"&&g.b==="NVIDIA"?1.15:1);
+      if(m<need)sc*=0.5;return sc;}
+    function sync(){
+      document.querySelectorAll(".chips").forEach(function(c){var k=c.getAttribute("data-k");c.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===st[k]);});});
+      $("fcc").value=st.cc;$("fbud").value=st.bud;$("fstreet").checked=st.street;$("fpsu").value=st.psu;$("fsym").textContent=C[st.cc].sym;
+      document.querySelectorAll(".pc-only").forEach(function(f){f.hidden=st.plat==="mac";});
+      try{history.replaceState(null,"","#"+new URLSearchParams({use:st.use,plat:st.plat,brand:st.brand,cc:st.cc,bud:st.bud,street:st.street?"1":"0",psu:st.psu}).toString());}catch(e){}
+      render();}
+    function card(g,rank,pr,why){
+      var warn=g.mem!=null&&g.mem<NEED[st.use];
+      return '<article class="pick'+(rank===0?" top":"")+'"><div class="pick-head"><span class="eyebrow">'+(rank===0?"Best match":"Alternative")+'</span><h3><a href="'+g.u+'">'+esc(g.n)+'</a></h3>'
+        +(pr?'<div class="pick-price">'+fmt(pr.v,st.cc)+'<span class="sub"> '+(pr.kind==="street"?"street price, "+esc(pr.date):"launch price")+'</span></div>':"")+'</div>'
+        +'<ul class="why">'+why.map(function(w){return"<li>"+w+"</li>";}).join("")+(warn?'<li class="warn">Only '+g.mem+' GB of memory: below the '+NEED[st.use]+' GB we suggest for '+USE[st.use]+'.</li>':"")+'</ul>'
+        +'<div class="pick-links"><a href="'+g.u+'">Full specs</a>'+g.vs.map(function(v){return' · <a href="'+v[1]+'">'+esc(v[0])+'</a>';}).join("")+(g.rv.length?' · Reviews: '+g.rv.map(function(r){return'<a href="'+r[1]+'" target="_blank" rel="noopener">'+esc(r[0])+'</a>';}).join(", "):"")+'</div></article>';}
+    function render(){
+      var out=$("fres");
+      if(st.plat==="mac"){
+        var macs=D.cards.filter(function(g){return g.b==="Apple";}).sort(function(a,b){return st.use==="ai"||st.use==="create"?(b.mem||0)-(a.mem||0):(a.gc||0)-(b.gc||0);});
+        var pickId={g1080:"apple-m5",g1440:"apple-m5-pro",g4k:"apple-m5-max",create:"apple-m5-max",ai:"apple-m5-ultra"}[st.use];
+        var first=macs.filter(function(g){return g.id===pickId;}).concat(macs.filter(function(g){return g.id!==pickId;})).slice(0,3);
+        out.innerHTML='<p class="note-box">Macs don\u2019t take separate graphics cards: the GPU is part of the chip, so you choose it when you choose the Mac. '+(st.use.charAt(0)==="g"?"Fewer games support macOS than Windows, so check your games first.":"")+'</p>'
+          +first.map(function(g,i){return card(g,i,null,[g.gc+'-core GPU (max)','Up to '+g.mem+' GB unified memory, shared by CPU and GPU',g.bw?(g.bw>=1000?(g.bw/1000)+" TB/s":g.bw+" GB/s")+" memory bandwidth":"",esc(g.plat)].filter(Boolean));}).join("");
+        return;}
+      var bud=Number(st.bud)||0, psu=Number(st.psu)||0, need=NEED[st.use];
+      var pool=D.cards.filter(function(g){return g.b!=="Apple"&&(st.use==="ai"||st.use==="create"||g.seg==="desktop")&&(st.brand==="any"||g.b===st.brand);});
+      var noPrice=pool.filter(function(g){return!price(g);}).length;
+      var priced=pool.filter(function(g){return price(g);});
+      var fitsPsu=function(g){return!psu||!g.w||g.w+250<=psu;};
+      var inBud=priced.filter(function(g){return(!bud||price(g).v<=bud)&&fitsPsu(g);}).sort(function(a,b){return score(b)-score(a)||price(a).v-price(b).v;});
+      var msgs=[];
+      if(!bud)msgs.push("Enter a budget to narrow this down. Showing the strongest matches at any price.");
+      if(noPrice&&st.cc!=="US")msgs.push(noPrice+" current card"+(noPrice>1?"s have":" has")+" no official "+esc(C[st.cc].n)+" price yet, so "+(noPrice>1?"they are":"it is")+" left out. Try the United States to see them all.");
+      var top=inBud.slice(0,3);
+      if(!top.length){out.innerHTML='<p class="note-box">No current card fits a budget of '+fmt(bud,st.cc)+(psu?" and a "+psu+" W power supply":"")+'. The cheapest option here is '+(priced.length?esc(priced.sort(function(a,b){return price(a).v-price(b).v;})[0].n)+" at "+fmt(price(priced[0]).v,st.cc):"not listed")+'.</p>';return;}
+      var html=msgs.map(function(m){return'<p class="note-box">'+m+'</p>';}).join("");
+      html+=top.map(function(g,i){var pr=price(g),why=[];
+        if(bud)why.push("Within your budget: "+fmt(pr.v,st.cc)+" of "+fmt(bud,st.cc)+".");
+        if(g.mem)why.push(g.mem+" GB of memory"+(g.mem>=need?" \u2014 enough for "+USE[st.use]+".":"."));
+        if(st.use==="ai"&&g.bw)why.push((g.bw>=1000?(g.bw/1000)+" TB/s":g.bw+" GB/s")+" memory bandwidth, which sets how fast models generate text.");
+        if(st.use==="create"&&g.b==="NVIDIA")why.push("CUDA is supported by most creative apps (Blender, Premiere Pro, DaVinci Resolve).");
+        if(g.w)why.push("Rated "+g.w+" W"+(psu?" \u2014 fits your "+psu+" W supply with headroom.":"; a "+(Math.ceil((g.w+250)/50)*50)+" W or larger supply is a sensible minimum."));
+        if(g.seg==="pro")why.push("Workstation card: certified drivers and more memory, at a higher price.");
+        return card(g,i,pr,why);}).join("");
+      var t=top[0], up=priced.filter(function(g){return fitsPsu(g)&&bud&&price(g).v>bud&&price(g).v<=bud*1.25&&score(g)>score(t);}).sort(function(a,b){return price(a).v-price(b).v;})[0];
+      if(up)html+='<p class="note-box">If you can stretch to '+fmt(price(up).v,st.cc)+', the <a href="'+up.u+'">'+esc(up.n)+'</a> is the next step up'+(up.mem>t.mem?" with "+up.mem+" GB of memory":"")+'.</p>';
+      out.innerHTML=html;}
+    document.querySelectorAll(".chips").forEach(function(c){c.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;st[c.getAttribute("data-k")]=b.getAttribute("data-v");sync();});});
+    $("fcc").addEventListener("change",function(){st.cc=this.value;sync();});
+    $("fbud").addEventListener("input",function(){st.bud=this.value;sync();});
+    $("fstreet").addEventListener("change",function(){st.street=this.checked;sync();});
+    $("fpsu").addEventListener("change",function(){st.psu=this.value;sync();});
+    sync();
+  })();
+  </script>`;
+  return layout({ title: "Which graphics card should I buy? GPU finder for 2026 — GPU Atlas", desc: "Answer five questions — use, budget in your currency, brand and power supply — and get a shortlist of current NVIDIA, AMD and Intel graphics cards, or the right Apple chip for a Mac.", canonical, depth, body, og: null, active: "finder",
+    jsonld: { "@context": "https://schema.org", "@type": "WebApplication", name: "GPU finder", applicationCategory: "UtilitiesApplication", operatingSystem: "Any", url: canonical, offers: { "@type": "Offer", price: "0", priceCurrency: "USD" } } });
 }
 
 const isCurrentDesktop = (g) => g.seg === "desktop" && ["current"].includes(g.status);
@@ -458,10 +645,10 @@ function indexHtml() {
   <meta name="twitter:card" content="summary_large_image">
 ${SUF ? `  <script>window.GPU_ATLAS_LINK_SUFFIX=${JSON.stringify(SUF)};</script>\n` : ""}`;
   html = html.replace("</head>", head + "</head>");
-  if (SUF) html = html.replace('href="guides/"', `href="guides/${SUF}"`);
+  if (SUF) html = html.replace('href="guides/"', `href="guides/${SUF}"`).replace('href="gpu-finder/"', `href="gpu-finder/${SUF}"`);
   // crawlable index of every spec sheet
-  const groups = ["NVIDIA", "AMD", "Intel"].map((b) => `<div><h3>${b}</h3><p>${LIST.filter((g) => g.brand === b).map((g) => `<a href="gpu/${g.id}/${SUF}">${esc(g.name)}</a>`).join(" · ")}</p></div>`).join("");
-  const allIndex = `  <section class="container all-index" aria-label="All spec sheets"><h2>All spec sheets</h2>${groups}<p><a href="guides/${SUF}">Guides</a></p></section>\n`;
+  const groups = BRANDS.map((b) => `<div><h3><a href="brands/${brandSlug(b)}/${SUF}">${b}</a></h3><p>${LIST.filter((g) => g.brand === b).map((g) => `<a href="gpu/${g.id}/${SUF}">${esc(g.name)}</a>`).join(" · ")}</p></div>`).join("");
+  const allIndex = `  <section class="container all-index" aria-label="All spec sheets"><h2>All spec sheets</h2>${groups}<p><a href="gpu-finder/${SUF}">GPU finder</a> · <a href="guides/${SUF}">Guides</a> · <a href="compare/${SUF}">Head-to-head comparisons</a></p></section>\n`;
   html = html.replace("  <div class=\"tray\"", allIndex + "  <div class=\"tray\"");
   return html;
 }
@@ -478,6 +665,10 @@ write("index.html", indexHtml());
 for (const g of LIST) write(`gpu/${g.id}/index.html`, productPage(g));
 write("gpu/index.html", `<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../${SUF}"><link rel="canonical" href="${SITE}/"><title>GPU Atlas</title><a href="../${SUF}">GPU database</a>`);
 write("guides/index.html", guidesIndex());
+write("compare/index.html", vsIndex());
+for (const v of VS) write(`compare/${v.slug}/index.html`, vsPage(v));
+for (const b of BRANDS) write(`brands/${brandSlug(b)}/index.html`, brandPage(b));
+write("gpu-finder/index.html", finderPage());
 for (const gd of GUIDES) write(`guides/${gd.slug}/index.html`, guidePage(gd));
 write("404.html", layout({ title: "Page not found — GPU Atlas", desc: "This page does not exist.", canonical: `${SITE}/`, depth: 0, body: `<div class="page-head"><h1>Page not found</h1><p class="lead">That page doesn't exist. Try the <a href="${SITE}/">GPU database</a> or the <a href="${SITE}/guides/">guides</a>.</p></div>`, active: "" })
   .replace(/href="assets\//g, `href="${SITE}/assets/`).replace(/href="\.\/"/g, `href="${SITE}/"`).replace(/href="#/g, `href="${SITE}/#`).replace(/href="guides\//g, `href="${SITE}/guides/`));
@@ -486,9 +677,13 @@ const urls = [
   { loc: `${SITE}/`, lastmod: BUILD_DATE, pr: "1.0" },
   { loc: `${SITE}/guides/`, lastmod: BUILD_DATE, pr: "0.8" },
   ...GUIDES.map((g) => ({ loc: `${SITE}/guides/${g.slug}/`, lastmod: BUILD_DATE, pr: "0.8" })),
+  { loc: `${SITE}/gpu-finder/`, lastmod: BUILD_DATE, pr: "0.9" },
+  { loc: `${SITE}/compare/`, lastmod: BUILD_DATE, pr: "0.7" },
+  ...VS.map((v) => ({ loc: `${SITE}/compare/${v.slug}/`, lastmod: BUILD_DATE, pr: "0.7" })),
+  ...BRANDS.map((b) => ({ loc: `${SITE}/brands/${brandSlug(b)}/`, lastmod: BUILD_DATE, pr: "0.8" })),
   ...LIST.map((g) => ({ loc: gpuUrl(g.id), lastmod: g.checked || BUILD_DATE, pr: g.status === "current" ? "0.9" : "0.6" }))
 ];
 write("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${xml(u.loc)}</loc><lastmod>${u.lastmod}</lastmod><priority>${u.pr}</priority></url>`).join("\n")}\n</urlset>\n`);
 write("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
 
-console.log(`Built ${LIST.length} product pages, ${GUIDES.length} guides, ${pngs} preview images, ${urls.length} sitemap URLs → dist/ (site: ${SITE}${SUF ? `, link suffix "${SUF}"` : ""})`);
+console.log(`Built ${LIST.length} product pages, ${GUIDES.length} guides, ${VS.length} comparisons, ${BRANDS.length} brand pages, GPU finder, ${pngs} preview images, ${urls.length} sitemap URLs → dist/ (site: ${SITE}${SUF ? `, link suffix "${SUF}"` : ""})`);
