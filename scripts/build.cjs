@@ -191,6 +191,7 @@ function productPage(g) {
         <aside>
           ${siblings.length > 1 ? `<div class="panel"><h3>${esc(g.series)} family</h3><ul>${siblings.map((x) => `<li class="${x === g ? "here" : ""}">${x === g ? esc(x.name) : `<a href="${link(x)}">${esc(x.name)}</a>`}</li>`).join("")}</ul></div>` : ""}
           ${similar.length ? `<div class="panel"><h3>Similar launch price</h3><ul>${similar.map((x) => `<li><a href="${link(x)}">${esc(x.name)}</a> <span class="sub">${esc(money(x.msrp, "US"))}</span></li>`).join("")}</ul></div>` : ""}
+          ${g.reviews && g.reviews.length ? `<div class="panel"><h3>Independent reviews</h3><ul>${g.reviews.map((r) => `<li class="src"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.outlet)}</a></li>`).join("")}</ul><p class="sub" style="margin-top:6px">For performance, read these rather than spec sheets. GPU Atlas does not copy benchmark results.</p></div>` : ""}
           <div class="panel"><h3>Sources</h3><ul>${sources.length ? sources.map((src) => `<li class="src">${src.u ? `<a href="${esc(src.u)}" target="_blank" rel="noopener">${esc(src.t)}</a>` : esc(src.t)}</li>`).join("") : "<li class='src'>Launch specifications</li>"}</ul></div>
         </aside>
       </div>

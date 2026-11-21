@@ -143,6 +143,108 @@
     if (g.id === "rx-7600" && !g.sources.includes("amd-7600")) g.sources.unshift("amd-7600");
   });
 
+  // ---------- Second verification pass (21 Nov 2026): the 40 products not covered above ----------
+  Object.assign(D.SOURCES, {
+    "nv-laptop-compare": { t: "NVIDIA — Compare gaming laptop GPUs (RTX 40 Series laptop table)", u: "https://www.nvidia.com/en-eu/geforce/laptops/compare/" },
+    "nv-rtx6000ada": { t: "NVIDIA — RTX 6000 Ada Generation specifications", u: "https://nvidia.com/en-us/products/workstations/rtx-6000" },
+    "nv-rtx4500ada-ds": { t: "NVIDIA — RTX 4500 Ada Generation datasheet", u: "https://www.nvidia.com/content/dam/en-zz/Solutions/products/workstations/nvidia-rtx-4500-datasheet.pdf" },
+    "ada-pro-table": { t: "Bechtle — NVIDIA RTX Ada workstation lineup table", u: "https://www.bechtle.com/de-en/brand/nvidia/ada-lovelace-gpus" },
+    "cgc-ada-pro": { t: "CG Channel — NVIDIA unveils RTX 4000, 4500 and 5000 Ada", u: "https://www.cgchannel.com/2023/08/nvidia-unveils-rtx-4000-4500-and-5000-workstation-gpus" },
+    "ck-ada-pro": { t: "Caseking — RTX Ada graphics cards (power and form factor)", u: "https://www.caseking.de/en/pc-components/graphics-cards/nvidia/rtx-pro/rtx-pro-ada-lovelace" },
+    "nv-h100": { t: "NVIDIA — H100 specifications", u: "https://www.nvidia.com/en-us/data-center/h100/" },
+    "nv-h200": { t: "NVIDIA — H200 specifications", u: "https://www.nvidia.com/h200" },
+    "nv-gh200-ds": { t: "NVIDIA — GH200 Grace Hopper Superchip datasheet", u: "https://dam-cdn.nvd.orangelogic.com/AssetLink/tkno03fa645gb7f33w60rf200d330420.pdf" },
+    "nv-l40s": { t: "NVIDIA — L40S specifications", u: "https://www.nvidia.com/en-eu/data-center/l40s/" },
+    "nv-l4": { t: "NVIDIA — L4 specifications", u: "https://www.nvidia.com/en-zz/data-center/l4/" },
+    "smc-a100": { t: "Supermicro — L40S / A100 / H100 NVL comparison datasheet", u: "https://www.supermicro.com/datasheet/datasheet_NVIDIA_L40S_Systems.pdf" },
+    "nv-v100-ds": { t: "NVIDIA — V100 datasheet", u: "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet.pdf" },
+    "nv-jetson-orin": { t: "NVIDIA — Jetson Orin modules and developer kits", u: "https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-agx-orin/" },
+    "nv-gt1030": { t: "NVIDIA — GeForce GT 1030 specifications", u: "https://www.nvidia.com/en-us/geforce/graphics-cards/gt-1030/specifications/" },
+    "pny-gt1030": { t: "PNY — GeForce GT 1030 product sheet", u: "https://www.pny.com/file%20library/company/support/product%20brochures/geforce%20graphics/portuguese/pny-nvidia-geforce-gt-1030.pdf" },
+    "at-titanxp": { t: "AnandTech — NVIDIA announces Titan Xp", u: "https://www.anandtech.com/show/11253" },
+    "amd-7800m": { t: "AMD — Radeon RX 7800M specifications", u: "https://www.amd.com/en/products/graphics/laptops/radeon/7000-series/amd-radeon-rx-7800m.html" },
+    "amd-6x50": { t: "AMD — Press release: Radeon RX 6950 XT, 6750 XT and 6650 XT", u: "https://ir.amd.com/news-events/press-releases/detail/1064/amd-announces-three-new-radeon-rx-6000-series-graphics" },
+    "kg-6x50": { t: "KitGuru — RX 6950 XT, 6750 XT and 6650 XT review (RX 6000 spec table)", u: "https://www.kitguru.net/components/graphic-cards/dominic-moass/amd-rx-6950-xt-6750-xt-6650-xt-review-ft-sapphire/all/1" },
+    "th-5700": { t: "Tom's Hardware — AMD announces Radeon RX 5700 XT and RX 5700", u: "https://www.tomshardware.com/news/amd-navi-radeon_rx_5700_xt-rx_5700-details,39608.html" },
+    "amd-5600": { t: "AMD — Press release: Radeon RX 5600 series", u: "https://www.amd.com/en/newsroom/press-releases/2020-1-6-amd-unveils-four-new-desktop-and-mobile-gpus-incl.html" },
+    "at-5600": { t: "AnandTech — AMD announces Radeon RX 5600 series (RX 5000 spec table)", u: "https://www.anandtech.com/show/15298" },
+    "amd-w7900-ds": { t: "AMD — Radeon PRO W7900 datasheet", u: "https://www.amd.com/content/dam/amd/en/documents/products/graphics/workstation/radeon-pro-w7900-datasheet.pdf" },
+    "amd-w7800-ds": { t: "AMD — Radeon PRO W7800 datasheet", u: "https://www.amd.com/content/dam/amd/en/documents/products/graphics/workstation/radeon-pro-w7800-datasheet.pdf" },
+    "amd-w7700-ds": { t: "AMD — Radeon PRO W7700 datasheet", u: "https://www.amd.com/content/dam/amd/en/documents/products/graphics/workstation/radeon-pro-w7700-datasheet.pdf" },
+    "amd-w7600-ds": { t: "AMD — Radeon PRO W7600 datasheet", u: "https://www.amd.com/content/dam/amd/en/documents/products/graphics/workstation/radeon-pro-w7600-datasheet.pdf" },
+  });
+
+  const edit = (id, f) => { const g = byId(id); if (g) f(g, g.specs); };
+  // RTX 40 laptops: NVIDIA's table matches; add the official boost-clock ranges.
+  const lpBoost = { "rtx-4090-laptop": "1455–2040", "rtx-4080-laptop": "1350–2280", "rtx-4070-laptop": "1230–2175", "rtx-4060-laptop": "1470–2370", "rtx-4050-laptop": "1605–2370" };
+  Object.entries(lpBoost).forEach(([id, r]) => edit(id, (g, s) => { s.boostRange = r; }));
+  // RX 5600 XT: AMD's launch specification was 12 Gbps / 1560 MHz; the 14 Gbps BIOS is a variant.
+  edit("rx-5600-xt", (g, s) => {
+    s.speed = 12; s.bw = 288; s.boost = 1560;
+    g.variants = [{ name: "Updated-BIOS cards", diff: "Most partner cards shipped with a launch-week BIOS raising memory to 14 Gbps (336 GB/s) and clocks above AMD's reference figures." }];
+  });
+  edit("rx-5500-xt", (g, s) => { s.boost = 1845; });
+  edit("rx-7800m", (g, s) => { s.gclk = 2145; });
+  // Titan Xp: NVIDIA published only the boost clock; drop the unofficial base clock.
+  edit("titan-xp", (g, s) => { delete s.base; s.bw = 547.7; });
+  // L4: NVIDIA does not publish a CUDA core count; third-party figures disagree, so leave it blank.
+  edit("l4", (g, s) => { delete s.cuda; g.checkNote = "NVIDIA does not publish a CUDA core count for L4, so none is shown."; });
+  edit("gh200", (g, s) => { s.bw = 4900; g.checkNote = "Bandwidth is for the 144 GB HBM3e version; the 96 GB HBM3 version is up to 4 TB/s."; s.power = "450–1000 W configurable (CPU + GPU + memory)"; });
+  edit("gb200-nvl72", (g, s) => { s.gpus = "72 Blackwell GPUs, 36 Grace CPUs"; s.form = "Liquid-cooled rack"; });
+  // GT 1030: GDDR5 is the reference card; the DDR4 card is a separate, slower variant on NVIDIA's own spec page.
+  edit("gt-1030", (g) => {
+    g.variants = [{ name: "GT 1030 DDR4", diff: "Same 384 cores, 1379 MHz boost and 2.1 Gbps DDR4 (about 17 GB/s): far slower than the GDDR5 card." }];
+  });
+
+  const pass2 = {
+    "rtx-4090-laptop": ["nv-laptop-compare"], "rtx-4080-laptop": ["nv-laptop-compare"], "rtx-4070-laptop": ["nv-laptop-compare"],
+    "rtx-4060-laptop": ["nv-laptop-compare"], "rtx-4050-laptop": ["nv-laptop-compare"],
+    "rtx-6000-ada": ["nv-rtx6000ada", "ada-pro-table"], "rtx-5000-ada": ["ada-pro-table", "cgc-ada-pro"], "rtx-4500-ada": ["nv-rtx4500ada-ds", "ada-pro-table"],
+    "rtx-4000-ada": ["ada-pro-table", "cgc-ada-pro"], "rtx-4000-sff-ada": ["ada-pro-table", "cgc-ada-pro"], "rtx-2000-ada": ["ada-pro-table", "ck-ada-pro"],
+    "h100-sxm": ["nv-h100"], "h200": ["nv-h200"], "gh200": ["nv-gh200-ds"], "l40s": ["nv-l40s"], "l4": ["nv-l4"], "a100": ["smc-a100"], "v100": ["nv-v100-ds"],
+    "jetson-agx-orin": ["nv-jetson-orin"], "jetson-orin-nano-super": ["nv-jetson-orin"],
+    "gt-1030": ["nv-gt1030", "pny-gt1030"], "titan-xp": ["at-titanxp"],
+    "rx-6950-xt": ["amd-6x50", "kg-6x50"], "rx-6750-xt": ["amd-6x50", "kg-6x50"], "rx-6650-xt": ["amd-6x50", "kg-6x50"], "rx-6700-xt": ["kg-6x50"],
+    "rx-5700-xt": ["th-5700"], "rx-5700": ["th-5700"], "rx-5600-xt": ["amd-5600", "at-5600"], "rx-5500-xt": ["at-5600"],
+    "rx-7800m": ["amd-7800m"],
+    "radeon-pro-w7900": ["amd-w7900-ds"], "radeon-pro-w7800": ["amd-w7800-ds"], "radeon-pro-w7700": ["amd-w7700-ds"], "radeon-pro-w7600": ["amd-w7600-ds"],
+    // descriptive entries (no numeric specs beyond what the vendor states)
+    "gb200-nvl72": [], "dgx-station": [], "drive-agx-thor": [], "igx-thor": [],
+  };
+  Object.entries(pass2).forEach(([id, srcs]) => edit(id, (g) => {
+    g.checked = CHECKED;
+    g.sources = [...srcs, ...g.sources.filter((k) => !srcs.includes(k) && k !== "launch")];
+    if (!g.sources.length) g.sources = ["launch"];
+  }));
+  edit("titan-xp", (g) => { g.checkNote = "NVIDIA published the boost clock (1582 MHz) but not a base clock, so none is shown."; });
+  edit("rx-6700-xt", (g) => { g.checkNote = "Checked against a review spec table; AMD's own RX 6700 XT page is no longer online."; });
+  edit("rx-5500-xt", (g) => { g.checkNote = "Checked against launch coverage; AMD's original RX 5500 XT page is no longer online."; });
+
+  // ---------- Independent reviews (links only; no benchmark numbers are copied) ----------
+  const R = (outlet, url) => ({ outlet, url });
+  const REVIEWS = {
+    "rtx-5090": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/nvidia-geforce-rtx-5090-review"), R("TechPowerUp", "https://www.techpowerup.com/review/nvidia-geforce-rtx-5090-founders-edition/"), R("Gamers Nexus", "https://gamersnexus.net/gpus/nvidia-geforce-rtx-5090-founders-edition-review-benchmarks-gaming-thermals-power"), R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/nvidia-rtx-5090-review-ray-tracing-dlss-4-and-raw-power-explored/all/1/")],
+    "rtx-5080": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/nvidia-geforce-rtx-5080-review"), R("TechSpot", "https://www.techspot.com/review/2947-nvidia-geforce-rtx-5080/"), R("Gamers Nexus", "https://gamersnexus.net/gpus/nvidia-geforce-rtx-5080-founders-edition-review-benchmarks-vs-5090-7900-xtx-4080-more"), R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/nvidia-rtx-5080-review-efficiency-gains-but-a-performance-letdown/all/1/")],
+    "rtx-5070-ti": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/nvidia-geforce-rtx-5070-ti-review-asus"), R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/msi-rtx-5070-ti-ventus-3x-oc-review/all/1/"), R("PC Gamer", "https://www.pcgamer.com/hardware/graphics-cards/nvidia-rtx-5070-ti-review-msi-ventus-3x/")],
+    "rtx-5070": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/nvidia-geforce-rtx-5070-review-founders-edition"), R("TechPowerUp", "https://www.techpowerup.com/review/nvidia-geforce-rtx-5070-founders-edition/"), R("PC Gamer", "https://www.pcgamer.com/hardware/graphics-cards/nvidia-rtx-5070-founders-edition-review/")],
+    "rtx-5060-ti": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/nvidia-geforce-rtx-5060-ti-16gb-review"), R("TechSpot", "https://www.techspot.com/review/2979-nvidia-geforce-rtx-5060-ti-16gb/"), R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/nvidia-rtx-5060-ti-16gb-review-ft-gigabyte-palit/all/1/")],
+    "rtx-5060": [R("TechSpot", "https://www.techspot.com/review/2992-nvidia-geforce-rtx-5060/"), R("TechPowerUp", "https://www.techpowerup.com/review/zotac-geforce-rtx-5060-solo-8-gb/")],
+    "rtx-5050": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/nvidia-geforce-rtx-5050-review"), R("TechPowerUp", "https://www.techpowerup.com/review/gigabyte-geforce-rtx-5050-gaming-oc/"), R("TechSpot", "https://www.techspot.com/review/3011-nvidia-geforce-rtx-5050/")],
+    "rx-9070-xt": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/amd-radeon-rx-9070-xt-review"), R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/amd-rx-9070-xt-review-ft-asrock/all/1/"), R("PC Gamer", "https://www.pcgamer.com/hardware/graphics-cards/amd-radeon-rx-9700-xt-review-asus-prime-oc/")],
+    "rx-9070": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/amd-radeon-rx-9070-xt-review"), R("TechSpot", "https://www.techspot.com/review/2962-amd-radeon-9070/")],
+    "rx-9060-xt": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/amd-radeon-rx-9060-xt-16gb-review"), R("TechSpot", "https://www.techspot.com/review/2996-amd-radeon-9060-xt/")],
+    "arc-b580": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/intel-arc-b580-review-the-new-usd249-gpu-champion-has-arrived"), R("TechPowerUp", "https://www.techpowerup.com/review/intel-arc-b580/"), R("TechSpot", "https://www.techspot.com/review/2935-intel-arc-b580/"), R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/intel-arc-b580-limited-edition-review/all/1/")],
+    "arc-b570": [R("Tom's Hardware", "https://www.tomshardware.com/pc-components/gpus/intel-arc-b570-review-asrock-challenger-oc-tested"), R("TechSpot", "https://www.techspot.com/review/2943-intel-arc-b570/")],
+    "rx-6950-xt": [R("Tom's Hardware", "https://www.tomshardware.com/reviews/amd-radeon-rx-6950-xt-review"), R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/amd-rx-6950-xt-6750-xt-6650-xt-review-ft-sapphire/all/1")],
+    "rx-6750-xt": [R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/amd-rx-6950-xt-6750-xt-6650-xt-review-ft-sapphire/all/1")],
+    "rx-6650-xt": [R("KitGuru", "https://www.kitguru.net/components/graphic-cards/dominic-moass/amd-rx-6950-xt-6750-xt-6650-xt-review-ft-sapphire/all/1")],
+    "rx-5700-xt": [R("Tom's Hardware", "https://www.tomshardware.com/uk/reviews/amd-radeon-rx_5700-rx_5700_xt,6216.html"), R("AnandTech", "https://anandtech.com/show/14618/13")],
+    "rx-5700": [R("Tom's Hardware", "https://www.tomshardware.com/uk/reviews/amd-radeon-rx_5700-rx_5700_xt,6216.html"), R("AnandTech", "https://anandtech.com/show/14618/13")],
+    "titan-xp": [R("Tom's Hardware", "https://www.tomshardware.com/reviews/nvidia-titan-xp,5066.html"), R("Gamers Nexus", "https://gamersnexus.net/hwreviews/2892-nvidia-titan-xp-review-vs-1080-ti-benchmark?showall=1")],
+    "l4": [R("StorageReview", "https://www.storagereview.com/pl/review/nvidia-l4-gpu-review-low-power-inferencing-wizard")],
+  };
+  Object.entries(REVIEWS).forEach(([id, list]) => edit(id, (g) => { g.reviews = list; }));
+
   D.updated = "21 November 2026";
   D.REPO = "https://github.com/happy2234/gpu-atlas";
 })();
