@@ -311,3 +311,26 @@ table.cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
 @media print {
   .site-header, .tray, .actions, .toolbar, .tabs { display: none !important; }
 }
+
+.brand-tag.apple { color: #3a3a3c; background: #ececee; }
+[data-theme="dark"] .brand-tag.apple { color: #d1d1d6; background: #2a2a2c; }
+
+/* ---------- charts ---------- */
+.viz { margin: 0; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --viz-lo: #c9c6c0; }
+[data-theme="dark"] .viz { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --viz-lo: #4a4844; }
+.viz svg { width: 100%; height: auto; display: block; overflow: visible; font: 12px/1 var(--sans); }
+.viz .t1 { fill: var(--text); } .viz .t2 { fill: var(--text-2); } .viz .t3 { fill: var(--muted); font-size: 11px; }
+.viz .b { font-weight: 600; } .viz .num { font-variant-numeric: tabular-nums; }
+.viz .grid { stroke: var(--border); stroke-width: 1; } .viz .axis { stroke: var(--muted); stroke-width: 1; }
+.viz .ref { stroke: var(--text-2); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.viz .m-hi, .viz .m-s1 { fill: var(--s1); } .viz .m-lo { fill: var(--viz-lo); }
+.viz .m-s2 { fill: var(--s2); } .viz .m-s3 { fill: var(--s3); }
+.viz .pt .m-s1, .viz .pt .m-s2, .viz .pt .m-s3 { stroke: var(--surface); stroke-width: 2; paint-order: stroke; }
+.viz .hit { fill: transparent; }
+.viz .row:hover .hit { fill: var(--surface-2); }
+.viz a .row:hover .m-lo { fill: var(--s1); opacity: .55; }
+.viz .pt:hover .m-s1, .viz .pt:hover .m-s2, .viz .pt:hover .m-s3 { stroke: var(--text); }
+.viz figcaption { margin-top: 8px; }
+.viz-legend { display: flex; gap: 18px; margin-bottom: 8px; font-size: 13px; color: var(--text-2); }
+.viz-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.viz-table { margin-top: 14px; } .viz-table summary { cursor: pointer; color: var(--text-2); font-size: 13px; }

@@ -60,7 +60,7 @@
   };
 
   // ---------- views ----------
-  function setTitle(t) { document.title = t ? `${t} — GPU Atlas` : "GPU Atlas — NVIDIA, AMD & Intel GPU reference"; }
+  function setTitle(t) { document.title = t ? `${t} — GPU Atlas` : "GPU Atlas — NVIDIA, AMD, Intel & Apple GPU reference"; }
   function setNav(name) {
     document.querySelectorAll(".nav a").forEach((a) => {
       if (a.dataset.route === name) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
@@ -77,7 +77,7 @@
       <div class="page-head">
         <p class="eyebrow">Reference</p>
         <h1>GPU database</h1>
-        <p class="lead">Specifications for current and recent NVIDIA, AMD and Intel GPUs and accelerators: desktop and laptop graphics, workstation cards, data-center accelerators, AI PCs and edge modules. Each model has its own spec sheet with variants, launch prices by country and sources.</p>
+        <p class="lead">Specifications for current and recent NVIDIA, AMD, Intel and Apple GPUs and accelerators: desktop and laptop graphics, workstation cards, data-center accelerators, AI PCs and edge modules. Each model has its own spec sheet with variants, launch prices by country and sources.</p>
         <div class="meta"><span>${LIST.length} products and configurations</span><span>Updated ${esc(D.updated)}</span><a href="#methodology">How this data is compiled</a></div>
       </div>
       <div class="devs">
@@ -90,7 +90,7 @@
       </div>
       <div class="toolbar">
         <input class="field search" type="search" id="q" placeholder="Search models, chips, series" value="${esc(state.q)}" aria-label="Search">
-        <div class="seg-ctl" role="group" aria-label="Brand">${["", "NVIDIA", "AMD", "Intel"].map((b) => `<button class="seg-btn" data-brand="${b}" aria-pressed="${state.brand === b}">${b || "All brands"}</button>`).join("")}</div>
+        <div class="seg-ctl" role="group" aria-label="Brand">${["", "NVIDIA", "AMD", "Intel", "Apple"].map((b) => `<button class="seg-btn" data-brand="${b}" aria-pressed="${state.brand === b}">${b || "All brands"}</button>`).join("")}</div>
         <select class="field" id="arch" aria-label="Architecture"><option value="">All architectures</option>${archs.map((a) => `<option ${state.arch === a ? "selected" : ""}>${esc(a)}</option>`).join("")}</select>
         <select class="field" id="status" aria-label="Status"><option value="">Any status</option>${Object.entries(D.STATUS).map(([k, v]) => `<option value="${k}" ${state.status === k ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
         <label class="budget"><span>Max launch price</span><span class="cur">${esc(SYM[COUNTRY(state.country).cur])}</span><input class="field" id="maxPrice" type="number" min="0" inputmode="numeric" placeholder="Any" value="${esc(state.maxPrice)}"></label>
@@ -99,7 +99,7 @@
         <span class="result-count" id="count"></span>
       </div>
       <div class="table-wrap"><table class="data" id="tbl"></table></div>
-      <p class="sub" style="margin-top:12px">Launch prices are the official prices NVIDIA, AMD or Intel published for the selected country (change it at the top of the page). A dash means no official price was published there, and the price filter only includes products with a price for that country. Each spec sheet also shows a dated street-price snapshot where one is available. Retail prices rose sharply through 2026 because of the memory shortage. AI TOPS are vendor figures and are not comparable across brands or generations.</p>
+      <p class="sub" style="margin-top:12px">Launch prices are the official prices NVIDIA, AMD or Intel published (Apple does not sell its GPUs separately, so Apple chips have none) for the selected country (change it at the top of the page). A dash means no official price was published there, and the price filter only includes products with a price for that country. Each spec sheet also shows a dated street-price snapshot where one is available. Retail prices rose sharply through 2026 because of the memory shortage. AI TOPS are vendor figures and are not comparable across brands or generations.</p>
     `;
 
     app.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
@@ -315,7 +315,7 @@
     app.innerHTML = `
       <div class="page-head"><p class="eyebrow">About</p><h1>Methodology &amp; sources</h1></div>
       <div class="prose">
-        <p>GPU Atlas is an independent reference. It is not affiliated with or endorsed by NVIDIA, AMD or Intel. NVIDIA, GeForce, RTX, CUDA, DGX and Jetson are trademarks of NVIDIA Corporation. AMD, Radeon, Ryzen, Instinct, RDNA and CDNA are trademarks of Advanced Micro Devices, Inc. Intel and Arc are trademarks of Intel Corporation.</p>
+        <p>GPU Atlas is an independent reference. It is not affiliated with or endorsed by NVIDIA, AMD, Intel or Apple. NVIDIA, GeForce, RTX, CUDA, DGX and Jetson are trademarks of NVIDIA Corporation. AMD, Radeon, Ryzen, Instinct, RDNA and CDNA are trademarks of Advanced Micro Devices, Inc. Intel and Arc are trademarks of Intel Corporation. Apple, Apple silicon and Mac are trademarks of Apple Inc.</p>
         <h2>What the numbers mean</h2>
         <ul>
           <li><b>Specifications</b> are NVIDIA's reference values at launch. Partner (AIB) cards often ship with higher clocks and power limits.</li>

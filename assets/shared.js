@@ -54,6 +54,7 @@
   }
   const priceIn = (g, code) => (g.prices && g.prices[code] != null ? g.prices[code] : null);
   const cores = (g) => g.specs.cuda || g.specs.sp || g.specs.shaders || null;
+  const gpuCores = (g) => g.specs.gcores || null;
   const coreLabel = (g) => (g.specs.cuda ? "CUDA" : g.specs.sp ? "Stream proc." : g.specs.shaders ? "Shader ALUs" : "");
   const isNum = (v) => /^[\d$~≈<>.,]/.test(String(v).trim());
   const cls = (v) => (isNum(v) ? "num" : "txt");
@@ -81,7 +82,7 @@
       ["die", "Die size", (v) => `${v} mm²`], ["gpus", "Configuration"], ["sm", "Streaming multiprocessors"], ["cu", "Compute units"],
       ["cuda", "CUDA cores", fmtInt], ["sp", "Stream processors", fmtInt], ["tensor", "Tensor Cores", fmtInt], ["rt", "RT cores", fmtInt],
       ["rta", "Ray accelerators", fmtInt], ["aia", "AI accelerators", fmtInt],
-      ["xe", "Xe-cores"], ["shaders", "Shader ALUs", fmtInt], ["xmx", "XMX engines", fmtInt], ["rtu", "Ray-tracing units", fmtInt], ["rops", "ROPs", fmtInt],
+      ["xe", "Xe-cores"], ["gcores", "GPU cores (max)", fmtInt], ["shaders", "Shader ALUs", fmtInt], ["xmx", "XMX engines", fmtInt], ["rtu", "Ray-tracing units", fmtInt], ["rops", "ROPs", fmtInt],
       ["base", "Base clock", (v) => `${fmtInt(v)} MHz`], ["gclk", "Graphics clock", (v) => `${fmtInt(v)} MHz`], ["boost", "Boost clock", (v) => `${fmtInt(v)} MHz`],
       ["boostRange", "Boost clock range", (v) => `${v} MHz`], ["l2", "L2 / last-level cache", (v) => `${v} MB`], ["ic", "Infinity Cache", (v) => `${v} MB`], ["cpu", "CPU"]
     ]],
@@ -90,7 +91,7 @@
       ["memType", "Type"], ["bus", "Bus width", (v) => `${v}-bit`], ["speed", "Data rate", (v) => `${v} Gbps`], ["bw", "Bandwidth", fmtBw]
     ]],
     ["Performance", [
-      ["fp32", "FP32 (shader)", (v) => `${v} TFLOPS`], ["ai", "AI TOPS (vendor figure)", fmtInt], ["fp4", "FP4"], ["fp8", "FP8"], ["fp16", "FP16 / BF16"], ["fp64", "FP64"]
+      ["fp32", "FP32 (shader)", (v) => `${v} TFLOPS`], ["ai", "AI TOPS (vendor figure)", fmtInt], ["ne", "Neural Engine"], ["fp4", "FP4"], ["fp8", "FP8"], ["fp16", "FP16 / BF16"], ["fp64", "FP64"]
     ]],
     ["Board & platform", [
       ["power", "Power", (v) => typeof v === "number" ? `${fmtInt(v)} W` : v], ["powerRange", "Power range"], ["connector", "Power connector"],
@@ -107,6 +108,7 @@
     if (s.cuda) push("CUDA cores", fmtInt(s.cuda));
     else if (s.sp) push("Stream processors", fmtInt(s.sp));
     else if (s.shaders) push("Shader ALUs", fmtInt(s.shaders));
+    else if (s.gcores) push("GPU cores", fmtInt(s.gcores));
     if (s.mem != null) {
       if (typeof s.mem === "number") push("Memory", s.mem >= 1000 ? (s.mem / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 }) : s.mem, `${s.mem >= 1000 ? "TB" : "GB"} ${s.memType ? s.memType.split(" ")[0] : ""}`);
       else push("Memory", s.mem);

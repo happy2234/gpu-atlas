@@ -23,7 +23,7 @@ const BUILD_DATE = process.env.BUILD_DATE || new Date().toISOString().slice(0, 1
 // ---------- load data in a sandbox that looks like a browser window ----------
 const ctx = { window: {}, console };
 vm.createContext(ctx);
-for (const f of ["data.js", "data-amd.js", "data-meta.js", "shared.js"]) {
+for (const f of ["data.js", "data-amd.js", "data-meta.js", "data-apple.js", "shared.js"]) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, "assets", f), "utf8"), ctx, { filename: f });
 }
 const D = ctx.window.GPU_ATLAS;
@@ -77,7 +77,7 @@ ${jsonld ? `  <script type="application/ld+json">${JSON.stringify(jsonld).replac
 <body>
   <header class="site-header">
     <div class="container">
-      <a class="brand" href="${dir(p) || "./"}"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">GPU Atlas</span><span class="brand-sub">NVIDIA, AMD &amp; Intel GPU reference</span></a>
+      <a class="brand" href="${dir(p) || "./"}"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">GPU Atlas</span><span class="brand-sub">NVIDIA, AMD, Intel &amp; Apple GPU reference</span></a>
       <nav class="nav" aria-label="Main">${nav.map(([l, h, k]) => `<a href="${h}"${k === active ? ' aria-current="page"' : ""}>${l}</a>`).join("")}</nav>
       <button class="icon-btn" id="themeBtn" type="button">Theme</button>
     </div>
@@ -87,7 +87,7 @@ ${body}
   </div></main>
   <footer class="site-footer">
     <div class="container">
-      <span>GPU Atlas is an independent reference and is not affiliated with NVIDIA, AMD or Intel. Product names are trademarks of their owners.</span>
+      <span>GPU Atlas is an independent reference and is not affiliated with NVIDIA, AMD, Intel or Apple. Product names are trademarks of their owners.</span>
       <span>Data updated ${esc(D.updated)} · <a href="${dir(p)}#methodology">Methodology</a> · <a href="${esc(D.REPO)}" rel="noopener">GitHub</a></span>
     </div>
   </footer>
@@ -158,7 +158,7 @@ function productPage(g) {
     <table class="street"><thead><tr><th>Country</th><th>Launch price</th><th>Reported street price</th><th>Change</th><th>Checked</th></tr></thead><tbody>${g.street.map((r) => {
       const c = COUNTRIES.find((x) => x.code === r.c); const lp = priceIn(g, r.c); const ch = lp != null ? pct(r.v, lp) : null; const src = D.SOURCES[r.src];
       return `<tr><td>${esc(c ? c.name : r.c)}${r.note ? `<div class="sub">${esc(r.note)}</div>` : ""}</td><td class="num">${lp != null ? esc(money(lp, r.c)) : "—"}</td><td class="num">${esc(money(r.v, r.c))}</td><td>${ch != null ? `<span class="up">${ch > 0 ? "+" : ""}${ch}%</span>` : "—"}</td><td><span class="sub">${esc(fmtDate(r.date))}${src ? ` · <a href="${esc(src.u)}" rel="noopener" target="_blank">source</a>` : ""}</span></td></tr>`;
-    }).join("")}</tbody></table><p class="sub" style="margin-top:8px">Street prices are dated snapshots of the lowest new-card price reported by the named source. They change daily and are not updated automatically.</p></section>` : "";
+    }).join("")}</tbody></table><p class="sub" style="margin-top:8px">Street prices are dated snapshots of the lowest new-card price reported by the named source. They change daily and are refreshed monthly.</p>${streetChart(g)}</section>` : "";
 
   const variants = g.variants && g.variants.length ? `<section class="spec-group"><h3>Variants &amp; versions</h3>${g.variants.map((v) => `<div class="variant"><b>${esc(v.name)}</b><span>${esc(v.diff)}</span></div>`).join("")}</section>` : "";
   const sources = (g.sources || []).map((k) => D.SOURCES[k]).filter(Boolean);
@@ -183,6 +183,7 @@ function productPage(g) {
       <div class="detail-grid">
         <div>
           <section class="spec-group"><h3>Overview</h3><dl class="specs">${overview.map(([k, v, raw]) => `<dt>${esc(k)}</dt><dd class="${["Launch", "Launch price (US)"].includes(k) ? "num" : "txt"}">${raw ? v : esc(v)}</dd>`).join("")}</dl></section>
+          ${ladderChart(g, link)}
           ${regional}
           ${street}
           ${groups}
@@ -226,8 +227,92 @@ const colIN = { h: "India launch", n: 1, f: (g) => priceCell(g, "IN") };
 const colUK = { h: "UK launch", n: 1, f: (g) => priceCell(g, "GB") };
 const colCores = { h: "Shader cores", n: 1, f: (g) => (cores(g) ? `${fmtInt(cores(g))}<div class="sub">${esc(coreLabel(g))}</div>` : "—") };
 
+
+// ---------- charts (static SVG, themed through CSS variables in styles.css) ----------
+const shortName = (n) => n.replace(/^(NVIDIA |GeForce |Radeon |Intel |AMD |Apple )+/, "");
+const barPath = (x, y, w, h, r = 4) => { r = Math.min(r, w / 2, h / 2); return w <= 0 ? "" : `M${x},${y}h${w - r}a${r},${r} 0 0 1 ${r},${r}v${h - 2 * r}a${r},${r} 0 0 1 -${r},${r}h-${w - r}z`; };
+const niceMax = (v) => { const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p; return 10 * p; };
+
+// Price ladder: US launch prices of the product's family, the current product highlighted.
+function ladderChart(g, link) {
+  const fam = LIST.filter((x) => x.brand === g.brand && x.series === g.series && x.seg === g.seg && x.msrp).sort((a, b) => b.msrp - a.msrp);
+  if (fam.length < 2 || !g.msrp) return "";
+  const W = 640, L = 170, R = 70, rowH = 26, barH = 16, top = 8, H = top + fam.length * rowH + 22;
+  const max = niceMax(Math.max(...fam.map((x) => x.msrp))), sx = (v) => (v / max) * (W - L - R);
+  const ticks = [0, max / 2, max];
+  const rows = fam.map((x, i) => {
+    const y = top + i * rowH, here = x === g, w = sx(x.msrp);
+    const mark = `<path d="${barPath(L, y + (rowH - barH) / 2, w, barH)}" class="${here ? "m-hi" : "m-lo"}"/>`;
+    const lbl = `<text x="${L - 10}" y="${y + rowH / 2 + 4}" text-anchor="end" class="${here ? "t1 b" : "t2"}">${esc(shortName(x.name))}</text>`;
+    const val = `<text x="${L + w + 8}" y="${y + rowH / 2 + 4}" class="${here ? "t1 b" : "t2"} num">${esc(money(x.msrp, "US"))}</text>`;
+    const hit = `<rect x="0" y="${y}" width="${W}" height="${rowH}" class="hit"/>`;
+    const body = `<g class="row"><title>${esc(x.name)}: ${esc(money(x.msrp, "US"))} US launch price (${esc(fmtDate(x.launch))})</title>${hit}${mark}${lbl}${val}</g>`;
+    return here ? body : `<a href="${link(x)}">${body}</a>`;
+  }).join("");
+  const axis = ticks.map((t) => `<line x1="${L + sx(t)}" x2="${L + sx(t)}" y1="${top}" y2="${H - 20}" class="grid"/><text x="${L + sx(t)}" y="${H - 4}" text-anchor="middle" class="t3 num">${esc(money(t, "US"))}</text>`).join("");
+  return `<section class="spec-group"><h3>Price ladder: ${esc(g.series)} family</h3>
+    <figure class="viz"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="US launch prices of the ${esc(g.series)} family, ${esc(g.name)} highlighted">${axis}${rows}</svg>
+    <figcaption class="sub">US launch prices (official MSRP at release). Select a bar to open that spec sheet.</figcaption></figure></section>`;
+}
+
+// Street price as change from launch price (0 = launch), so different currencies share one axis.
+function streetChart(g) {
+  const rows = (g.street || []).map((r) => ({ r, lp: priceIn(g, r.c), c: COUNTRIES.find((x) => x.code === r.c) })).filter((x) => x.lp);
+  if (!rows.length) return "";
+  const W = 640, L = 130, R = 70, rowH = 30, barH = 16, top = 8, H = top + rows.length * rowH + 24;
+  const ch = rows.map((x) => ((x.r.v - x.lp) / x.lp) * 100);
+  const hi = niceMax(Math.max(10, ...ch)), lo = Math.min(0, ...ch) < 0 ? -niceMax(-Math.min(...ch)) : 0;
+  const sx = (v) => L + ((v - lo) / (hi - lo)) * (W - L - R);
+  const step = niceMax(hi / 3), ticks = []; for (let v = 0; v <= hi + 1e-9; v += step) ticks.push(v); if (lo < 0) ticks.unshift(lo);
+  const bars = rows.map((x, i) => {
+    const y = top + i * rowH, v = ch[i], c = Math.round(v), x0 = sx(Math.min(0, v)), w = Math.abs(sx(v) - sx(0));
+    const d = v >= 0 ? barPath(x0, y + (rowH - barH) / 2, w, barH) : `M${x0 + w},${y + (rowH - barH) / 2}h-${Math.max(w - 4, 0)}a4,4 0 0 0 -4,4v${barH - 8}a4,4 0 0 0 4,4h${Math.max(w - 4, 0)}z`;
+    return `<g class="row"><title>${esc(x.c ? x.c.name : x.r.c)}: ${esc(money(x.r.v, x.r.c))} street vs ${esc(money(x.lp, x.r.c))} launch (${c > 0 ? "+" : ""}${c}%), ${esc(fmtDate(x.r.date))}</title>
+      <rect x="0" y="${y}" width="${W}" height="${rowH}" class="hit"/><path d="${d}" class="m-hi"/>
+      <text x="${L - 10}" y="${y + rowH / 2 + 4}" text-anchor="end" class="t2">${esc(x.c ? x.c.name : x.r.c)}</text>
+      <text x="${(v >= 0 ? sx(v) + 8 : sx(0) + 8)}" y="${y + rowH / 2 + 4}" class="t1 num">${c > 0 ? "+" : ""}${c}%</text></g>`;
+  }).join("");
+  const axis = ticks.map((t) => `<line x1="${sx(t)}" x2="${sx(t)}" y1="${top}" y2="${H - 22}" class="${t === 0 ? "ref" : "grid"}"/><text x="${sx(t)}" y="${H - 6}" text-anchor="middle" class="t3 num">${t === 0 ? "Launch price" : (t > 0 ? "+" : "") + Math.round(t) + "%"}</text>`).join("");
+  return `<figure class="viz" style="margin-top:14px"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Change from launch price to reported street price, by country">${axis}${bars}</svg>
+    <figcaption class="sub">Change from the launch price to the reported street price, each in its own currency. Exact prices are in the table above.</figcaption></figure>`;
+}
+
+// Launch price over time: every desktop card with a US launch price, by brand (log scale).
+const BRAND_SERIES = [["NVIDIA", "s1", "circle"], ["AMD", "s2", "square"], ["Intel", "s3", "triangle"]];
+function shape(kind, x, y, cls) {
+  if (kind === "square") return `<rect x="${x - 4.5}" y="${y - 4.5}" width="9" height="9" rx="1.5" class="${cls}"/>`;
+  if (kind === "triangle") return `<path d="M${x},${y - 5.5}L${x + 5.5},${y + 4.5}L${x - 5.5},${y + 4.5}z" class="${cls}"/>`;
+  return `<circle cx="${x}" cy="${y}" r="4.5" class="${cls}"/>`;
+}
+function timelineChart(depth) {
+  const p = up(depth);
+  const pts = LIST.filter((g) => g.seg === "desktop" && g.msrp && /^\d{4}-\d{2}/.test(g.launch || "") && !["rumored", "roadmap"].includes(g.status));
+  const t = (g) => { const [y, m] = g.launch.split("-").map(Number); return y + (m - 0.5) / 12; };
+  const W = 900, H = 460, L = 64, R = 20, T = 16, B = 40;
+  const x0 = Math.floor(Math.min(...pts.map(t))), x1 = Math.ceil(Math.max(...pts.map(t)));
+  const yTicks = [50, 100, 200, 500, 1000, 2000].filter((v) => v <= niceMax(Math.max(...pts.map((g) => g.msrp))) * 1.2);
+  const y0 = Math.log10(Math.min(50, ...pts.map((g) => g.msrp))), y1 = Math.log10(Math.max(...yTicks, ...pts.map((g) => g.msrp)));
+  const sx = (v) => L + ((v - x0) / (x1 - x0)) * (W - L - R), sy = (v) => T + (1 - (Math.log10(v) - y0) / (y1 - y0)) * (H - T - B);
+  const grid = yTicks.map((v) => `<line x1="${L}" x2="${W - R}" y1="${sy(v)}" y2="${sy(v)}" class="grid"/><text x="${L - 8}" y="${sy(v) + 4}" text-anchor="end" class="t3 num">$${fmtInt(v)}</text>`).join("")
+    + Array.from({ length: x1 - x0 + 1 }, (_, i) => x0 + i).map((yr) => `<text x="${sx(yr)}" y="${H - B + 20}" text-anchor="middle" class="t3 num">${yr}</text><line x1="${sx(yr)}" x2="${sx(yr)}" y1="${H - B}" y2="${H - B + 5}" class="grid"/>`).join("");
+  const marks = BRAND_SERIES.map(([b, c, k]) => pts.filter((g) => g.brand === b).map((g) =>
+    `<a href="${p}gpu/${g.id}/${SUF}"><g class="pt"><title>${esc(g.name)} — ${esc(money(g.msrp, "US"))}, ${esc(fmtDate(g.launch))}</title><circle cx="${sx(t(g))}" cy="${sy(g.msrp)}" r="11" class="hit"/>${shape(k, sx(t(g)), sy(g.msrp), "m-" + c)}</g></a>`).join("")).join("");
+  const legend = `<div class="viz-legend">${BRAND_SERIES.map(([b, c, k]) => `<span><svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">${shape(k, 0, 0, "m-" + c)}</svg>${b}</span>`).join("")}</div>`;
+  const table = `<details class="viz-table"><summary>Show the data as a table</summary>${tableRows(pts.slice().sort((a, b) => a.launch < b.launch ? -1 : 1), [colModel, colLaunch, colUS], depth)}</details>`;
+  return `<figure class="viz">${legend}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="US launch price of desktop graphics cards by launch date and brand, logarithmic price scale"><line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" class="axis"/>${grid}${marks}</svg>
+    <figcaption class="sub">Each mark is one desktop card at its official US launch price; the price axis is logarithmic so budget and flagship cards are both readable. Hover a mark for details, or select it to open the spec sheet. Apple chips are not included because Apple does not sell its GPUs separately.</figcaption>${table}</figure>`;
+}
+
 const isCurrentDesktop = (g) => g.seg === "desktop" && ["current"].includes(g.status);
 const GUIDES = [
+  {
+    slug: "graphics-card-launch-prices-over-time",
+    title: "Graphics card launch prices over time, 2016–2026",
+    short: "Chart of every NVIDIA, AMD and Intel desktop card's US launch price by release date.",
+    build() {
+      return `<p class="lead">How launch prices have moved across ten years of desktop graphics cards. Flagship prices have climbed steadily while the budget end has stayed roughly flat; for what cards actually sell for in 2026, see the <a href="${dir("../launch-price-vs-street-price-2026/")}">price check</a>.</p><div class="section">${timelineChart(2)}</div>`;
+    }
+  },
   {
     slug: "launch-price-vs-street-price-2026",
     title: "GPU prices in 2026: launch price vs. what cards sell for now",
@@ -345,7 +430,7 @@ function defaultSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <rect width="1200" height="630" fill="#fafaf9"/><rect width="1200" height="12" fill="#3f6b0a"/>
   <text x="80" y="230" font-family="Inter" font-weight="700" font-size="96" fill="#1a1917">GPU Atlas</text>
-  <text x="80" y="310" font-family="Inter" font-size="40" fill="#4a4743">NVIDIA, AMD &amp; Intel GPU reference</text>
+  <text x="80" y="310" font-family="Inter" font-size="40" fill="#4a4743">NVIDIA, AMD, Intel &amp; Apple GPU reference</text>
   <text x="80" y="380" font-family="Inter" font-size="30" fill="#77726b">${LIST.length} spec sheets · launch prices by country · sources</text>
 </svg>`;
 }
