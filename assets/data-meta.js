@@ -247,4 +247,5 @@
 
   D.updated = "21 November 2026";
   D.REPO = "https://github.com/happy2234/gpu-atlas";
+  D.CONTACT = "gaurav@gpuatlas.in";
 })();

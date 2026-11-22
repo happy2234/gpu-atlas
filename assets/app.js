@@ -329,7 +329,7 @@
           <li>Values that NVIDIA has not published are left blank rather than estimated.</li>
         </ul>
         <h2>Corrections</h2>
-        <p>Spec errors happen. Each spec sheet lists the sources used for that product; where a source and this page disagree, the source is authoritative. Use the "Report an error" link on any spec sheet to open an issue on <a href="${esc(D.REPO)}/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+        <p>Spec errors happen. Each spec sheet lists the sources used for that product; where a source and this page disagree, the source is authoritative. Use the "Report an error" link on any spec sheet, or email <a href="mailto:${esc(D.CONTACT)}">${esc(D.CONTACT)}</a>.</p>
         <h2>Sources</h2>
         <ul>${all.map(([, s]) => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener">${esc(s.t)}</a></li>`).join("")}</ul>
         <p class="sub">Specifications for products launched between 2016 and 2024 are compiled from NVIDIA's launch specifications.</p>

@@ -94,7 +94,7 @@ ${body}
   <footer class="site-footer">
     <div class="container">
       <span>GPU Atlas is an independent reference and is not affiliated with NVIDIA, AMD, Intel or Apple. Product names are trademarks of their owners.</span>
-      <span>Data updated ${esc(D.updated)} · <a href="${dir(p + "about/")}">About</a> · <a href="${esc(D.REPO)}" rel="noopener">GitHub</a></span>
+      <span>Data updated ${esc(D.updated)} · <a href="${dir(p + "about/")}">About</a> · <a href="mailto:${esc(D.CONTACT)}">Contact</a></span>
     </div>
   </footer>
   <script>
@@ -168,7 +168,7 @@ function productPage(g) {
 
   const variants = g.variants && g.variants.length ? `<section class="spec-group"><h3>Variants &amp; versions</h3>${g.variants.map((v) => `<div class="variant"><b>${esc(v.name)}</b><span>${esc(v.diff)}</span></div>`).join("")}</section>` : "";
   const sources = (g.sources || []).map((k) => D.SOURCES[k]).filter(Boolean);
-  const issue = `${D.REPO}/issues/new?title=${encodeURIComponent("Spec error: " + g.name)}&body=${encodeURIComponent(`Page: ${canonical}\n\nWhat is wrong:\n\nCorrect value:\n\nSource (link to an official page if possible):\n`)}`;
+  const issue = `mailto:${D.CONTACT}?subject=${encodeURIComponent("Spec error: " + g.name)}&body=${encodeURIComponent(`Page: ${canonical}\n\nWhat is wrong:\n\nCorrect value:\n\nSource (link to an official page if possible):\n`)}`;
   const ks = keyStats(g);
 
   const body = `
@@ -754,10 +754,10 @@ function aboutPage() {
     <h2>Where the numbers come from</h2><p>Specifications come from manufacturers' own spec pages, datasheets and press releases wherever they exist, and from named reviews or launch coverage when the official page is gone. Each spec sheet lists its sources and the date its figures were last checked; ${nChecked} of ${LIST.length} products have been checked against a source, and the site links to ${nSrc} sources in all.</p>
     <h2>Prices</h2><p>Launch prices are the official prices a manufacturer announced for a country; we never convert currencies. Street prices are dated snapshots of the lowest new-card price reported by a named tracker and are refreshed monthly. Apple does not sell its GPUs separately, so Apple chips have no price.</p>
     <h2>Performance</h2><p>GPU Atlas does not run benchmarks or copy other sites' benchmark results. Spec sheets link to independent reviews instead, and the <a href="${dir(p + "gpu-finder/")}">GPU finder</a> explains exactly how it ranks cards.</p>
-    <h2>Corrections</h2><p>Every spec sheet has a "Report an error" link that opens a public issue on <a href="${esc(D.REPO)}/issues" rel="noopener">GitHub</a>. Corrections are made as soon as they are confirmed against a source, and the change history is public in the <a href="${esc(D.REPO)}/commits/main" rel="noopener">repository</a>.</p>
+    <h2>Corrections and contact</h2><p>Every spec sheet has a "Report an error" link that opens an email to <a href="mailto:${esc(D.CONTACT)}">${esc(D.CONTACT)}</a> with the page already filled in. Corrections are made as soon as they are confirmed against a source. For anything else, including press and partnership enquiries, write to the same address.</p>
     </div>`;
   return layout({ title: "About GPU Atlas: independent sources, prices and corrections — GPU Atlas", desc: "Who runs GPU Atlas, where its specifications and prices come from, how street prices are tracked, and how to report an error.", canonical: `${SITE}/about/`, depth, body, og: null, active: "methodology",
-    jsonld: { "@context": "https://schema.org", "@type": "AboutPage", url: `${SITE}/about/`, name: "About GPU Atlas", publisher: { "@type": "Organization", name: "GPU Atlas", url: `${SITE}/`, logo: `${SITE}/assets/brand/icon-512.png`, founder: { "@type": "Person", name: "Gaurav Kumar" } } } });
+    jsonld: { "@context": "https://schema.org", "@type": "AboutPage", url: `${SITE}/about/`, name: "About GPU Atlas", publisher: { "@type": "Organization", name: "GPU Atlas", url: `${SITE}/`, email: D.CONTACT, logo: `${SITE}/assets/brand/icon-512.png`, founder: { "@type": "Person", name: "Gaurav Kumar" } } } });
 }
 
 // LLM memory guide: weights + ~20% for context cache and runtime (rule of thumb, stated on the page)
