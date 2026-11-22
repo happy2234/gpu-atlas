@@ -459,3 +459,11 @@ dl.glossary dd { margin: 4px 0 0; color: var(--text-2); }
 .prose { max-width: 720px; } .prose h2 { font-size: 20px; margin: 28px 0 6px; } .prose p { color: var(--text-2); }
 dl.arch-facts { display: flex; flex-wrap: wrap; gap: 10px 36px; margin: 18px 0 0; }
 dl.arch-facts dt { font-size: 13px; color: var(--muted); } dl.arch-facts dd { margin: 2px 0 0; font-weight: 600; }
+
+/* Logo */
+.brand { align-items: center; }
+.brand-logo { height: 30px; width: auto; display: block; }
+.brand-logo.on-dark { display: none; }
+[data-theme="dark"] .brand-logo.on-light { display: none; }
+[data-theme="dark"] .brand-logo.on-dark { display: block; }
+@media (max-width: 640px) { .brand-logo { height: 26px; } }

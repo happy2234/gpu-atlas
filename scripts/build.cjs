@@ -39,7 +39,7 @@ const copyDir = (from, to) => { fs.mkdirSync(to, { recursive: true }); for (cons
 const up = (depth) => "../".repeat(depth);
 const dir = (p) => p + SUF; // internal directory link
 const gpuUrl = (id) => `${SITE}/gpu/${id}/`;
-const BRAND_COLOR = { NVIDIA: "#3f6b0a", AMD: "#a3171b", Intel: "#0b5ca8" };
+const BRAND_COLOR = { NVIDIA: "#3f6b0a", AMD: "#a3171b", Intel: "#0b5ca8", Apple: "#3a3a3c" };
 const INDEXNOW_KEY = "5f3c9a1e7b2d4c8a9e6f0b1d2c3a4e5f";
 const pct = (a, b) => (b ? Math.round(((a - b) / b) * 100) : null);
 const memText = (g) => { const m = g.specs.mem; if (m == null) return null; if (typeof m === "string") return m; return m >= 1000 ? `${(m / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} TB` : `${m} GB`; };
@@ -67,8 +67,11 @@ function layout({ title, desc, canonical, depth, body, og, jsonld, active }) {
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#fafaf9">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233f6b0a'/%3E%3Cpath d='M8 22V10h6a5 5 0 0 1 0 10h-2' fill='none' stroke='%23fff' stroke-width='3'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#f5f6f4">
+  <link rel="icon" href="${p}assets/brand/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="${p}assets/brand/icon-32.png">
+  <link rel="apple-touch-icon" href="${p}assets/brand/icon-180.png">
+  <link rel="manifest" href="${p}assets/brand/site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -78,7 +81,7 @@ ${jsonld ? `  <script type="application/ld+json">${JSON.stringify(jsonld).replac
 <body>
   <header class="site-header">
     <div class="container">
-      <a class="brand" href="${dir(p) || "./"}"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">GPU Atlas</span><span class="brand-sub">NVIDIA, AMD, Intel &amp; Apple GPU reference</span></a>
+      <a class="brand" href="${dir(p) || "./"}"><img class="brand-logo on-light" src="${p}assets/brand/logo-light.png" alt="GPU Atlas" width="163" height="30"><img class="brand-logo on-dark" src="${p}assets/brand/logo-dark.png" alt="" aria-hidden="true" width="162" height="30"><span class="brand-sub">NVIDIA, AMD, Intel &amp; Apple GPU reference</span></a>
       <nav class="nav" aria-label="Main">${nav.map(([l, h, k]) => `<a href="${h}"${k === active ? ' aria-current="page"' : ""}>${l}</a>`).join("")}</nav>
       <button class="icon-btn" id="themeBtn" type="button">Theme</button>
     </div>
@@ -597,8 +600,9 @@ function guidesIndex() {
 // ---------- social preview images ----------
 function xml(s) { return String(s).replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[c])); }
 function wrap(text, max) { const words = text.split(" "); const lines = [""]; for (const w of words) { const l = lines[lines.length - 1]; if ((l + " " + w).trim().length > max && l) lines.push(w); else lines[lines.length - 1] = (l + " " + w).trim(); } return lines; }
+const LOGO_URI = "data:image/png;base64," + fs.readFileSync(path.join(ROOT, "assets/brand/logo-light.png")).toString("base64");
 function ogSvg(g) {
-  const color = BRAND_COLOR[g.brand] || "#3f6b0a";
+  const color = BRAND_COLOR[g.brand] || "#0d6b7d";
   const name = g.name.replace(/ \(unconfirmed\)$/, "");
   const size = name.length > 30 ? 58 : 72;
   const lines = wrap(name, name.length > 30 ? 26 : 22).slice(0, 2);
@@ -623,15 +627,15 @@ function ogSvg(g) {
   <text x="80" y="110" font-family="Inter" font-weight="600" font-size="26"><tspan fill="${color}">${xml(g.brand.toUpperCase())}</tspan><tspan dx="16" fill="#77726b">${xml((D.SEGMENTS[g.seg] + " · " + g.arch).toUpperCase())}</tspan></text>
   ${lines.map((l, i) => `<text x="80" y="${190 + i * (size + 8)}" font-family="Inter" font-weight="700" font-size="${size}" fill="#1a1917">${xml(l)}</text>`).join("")}
   ${stats}
-  <text x="80" y="580" font-family="Inter" font-weight="700" font-size="26" fill="#1a1917">GPU Atlas</text>
-  <text x="225" y="580" font-family="Inter" font-size="24" fill="#77726b">Spec sheet · prices by country · sources</text>
+  <image x="80" y="553" width="190" height="35" href="${LOGO_URI}"/>
+  <text x="292" y="580" font-family="Inter" font-size="24" fill="#77726b">Spec sheet · prices by country · sources</text>
   <text x="1120" y="580" text-anchor="end" font-family="Inter" font-size="24" fill="#4a4743">${xml(launch)}</text>
 </svg>`;
 }
 function defaultSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#fafaf9"/><rect width="1200" height="12" fill="#3f6b0a"/>
-  <text x="80" y="230" font-family="Inter" font-weight="700" font-size="96" fill="#1a1917">GPU Atlas</text>
+  <rect width="1200" height="630" fill="#f5f6f4"/><rect width="1200" height="12" fill="#0d6b7d"/>
+  <image x="80" y="140" width="652" height="120" href="${LOGO_URI}"/>
   <text x="80" y="310" font-family="Inter" font-size="40" fill="#4a4743">NVIDIA, AMD, Intel &amp; Apple GPU reference</text>
   <text x="80" y="380" font-family="Inter" font-size="30" fill="#77726b">${LIST.length} spec sheets · launch prices by country · sources</text>
 </svg>`;
@@ -743,7 +747,7 @@ function aboutPage() {
     <h2>Corrections</h2><p>Every spec sheet has a "Report an error" link that opens a public issue on <a href="${esc(D.REPO)}/issues" rel="noopener">GitHub</a>. Corrections are made as soon as they are confirmed against a source, and the change history is public in the <a href="${esc(D.REPO)}/commits/main" rel="noopener">repository</a>.</p>
     </div>`;
   return layout({ title: "About GPU Atlas: independent sources, prices and corrections — GPU Atlas", desc: "Who runs GPU Atlas, where its specifications and prices come from, how street prices are tracked, and how to report an error.", canonical: `${SITE}/about/`, depth, body, og: null, active: "methodology",
-    jsonld: { "@context": "https://schema.org", "@type": "AboutPage", url: `${SITE}/about/`, name: "About GPU Atlas", publisher: { "@type": "Organization", name: "GPU Atlas", url: `${SITE}/`, founder: { "@type": "Person", name: "Gaurav Kumar" } } } });
+    jsonld: { "@context": "https://schema.org", "@type": "AboutPage", url: `${SITE}/about/`, name: "About GPU Atlas", publisher: { "@type": "Organization", name: "GPU Atlas", url: `${SITE}/`, logo: `${SITE}/assets/brand/icon-512.png`, founder: { "@type": "Person", name: "Gaurav Kumar" } } } });
 }
 
 // LLM memory guide: weights + ~20% for context cache and runtime (rule of thumb, stated on the page)
@@ -810,6 +814,7 @@ fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 copyDir(path.join(ROOT, "assets"), path.join(OUT, "assets"));
 fs.writeFileSync(path.join(OUT, ".nojekyll"), "");
+fs.copyFileSync(path.join(ROOT, "assets/brand/favicon.ico"), path.join(OUT, "favicon.ico"));
 // Site-ownership files (Google Search Console, Bing) dropped in the repo root are published as-is.
 for (const f of fs.readdirSync(ROOT)) if (/^google[0-9a-f]+\.html$|^BingSiteAuth\.xml$|^yandex_[0-9a-f]+\.html$/.test(f)) fs.copyFileSync(path.join(ROOT, f), path.join(OUT, f));
 const pngs = process.env.SKIP_IMAGES ? 0 : renderPngs();
