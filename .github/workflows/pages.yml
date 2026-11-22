@@ -56,6 +56,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Check custom domain
+        continue-on-error: true
+        run: |
+          echo "A records:"; dig +short A gpuatlas.in @8.8.8.8
+          echo "www:"; dig +short CNAME www.gpuatlas.in @8.8.8.8
+          echo "HTTP:"; curl -sI http://gpuatlas.in | head -5
+          echo "HTTPS:"; curl -sI https://gpuatlas.in 2>&1 | head -5 || true
+          curl -sv https://gpuatlas.in -o /dev/null 2>&1 | grep -iE "subject:|issuer:|SSL certificate problem|no alternative" | head -3
       - name: Notify Bing and Yandex (IndexNow)
         continue-on-error: true
         run: |
