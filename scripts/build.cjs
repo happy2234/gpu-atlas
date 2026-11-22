@@ -40,6 +40,8 @@ const up = (depth) => "../".repeat(depth);
 const dir = (p) => p + SUF; // internal directory link
 const gpuUrl = (id) => `${SITE}/gpu/${id}/`;
 const BRAND_COLOR = { NVIDIA: "#3f6b0a", AMD: "#a3171b", Intel: "#0b5ca8", Apple: "#3a3a3c" };
+// Content hash of CSS/JS so browsers fetch fresh files after each change
+const ASSET_V = require("crypto").createHash("sha1").update(fs.readdirSync(path.join(ROOT, "assets")).filter((f) => /\.(css|js)$/.test(f)).sort().map((f) => fs.readFileSync(path.join(ROOT, "assets", f))).join("")).digest("hex").slice(0, 10);
 const INDEXNOW_KEY = "5f3c9a1e7b2d4c8a9e6f0b1d2c3a4e5f";
 const pct = (a, b) => (b ? Math.round(((a - b) / b) * 100) : null);
 const memText = (g) => { const m = g.specs.mem; if (m == null) return null; if (typeof m === "string") return m; return m >= 1000 ? `${(m / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} TB` : `${m} GB`; };
@@ -75,7 +77,7 @@ function layout({ title, desc, canonical, depth, body, og, jsonld, active }) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="${p}assets/styles.css">
+  <link rel="stylesheet" href="${p}assets/styles.css?v=${ASSET_V}">
   <script>try{var t=localStorage.getItem("gpuatlas:theme");t=t?JSON.parse(t):(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 ${jsonld ? `  <script type="application/ld+json">${JSON.stringify(jsonld).replace(/</g, "\\u003c")}</script>\n` : ""}</head>
 <body>
@@ -664,6 +666,7 @@ function indexHtml() {
   <meta name="twitter:card" content="summary_large_image">
 ${SUF ? `  <script>window.GPU_ATLAS_LINK_SUFFIX=${JSON.stringify(SUF)};</script>\n` : ""}`;
   html = html.replace("</head>", head + "</head>");
+  html = html.replace(/(href|src)="assets\/([\w-]+\.(?:css|js))"/g, (m, a, f) => `${a}="assets/${f}?v=${ASSET_V}"`);
   if (SUF) html = html.replace('href="guides/"', `href="guides/${SUF}"`).replace('href="gpu-finder/"', `href="gpu-finder/${SUF}"`);
   // crawlable index of every spec sheet
   const groups = BRANDS.map((b) => `<div><h3><a href="brands/${brandSlug(b)}/${SUF}">${b}</a></h3><p>${LIST.filter((g) => g.brand === b).map((g) => `<a href="gpu/${g.id}/${SUF}">${esc(g.name)}</a>`).join(" · ")}</p></div>`).join("");
