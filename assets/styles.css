@@ -467,3 +467,6 @@ dl.arch-facts dt { font-size: 13px; color: var(--muted); } dl.arch-facts dd { ma
 [data-theme="dark"] .brand-logo.on-light { display: none; }
 [data-theme="dark"] .brand-logo.on-dark { display: block; }
 @media (max-width: 640px) { .brand-logo { height: 26px; } }
+.sl-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text); }

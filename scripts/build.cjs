@@ -420,7 +420,7 @@ function finderPage() {
       ${step(5, "What power supply do you have?", `<div class="seg" data-k="psu"><button type="button" data-v="">Not sure</button>${[450, 550, 650, 750, 850, 1000].map((w) => `<button type="button" data-v="${w}">${w} W</button>`).join("")}</div>
           <p class="sub hint">We allow about 250 W for the rest of the PC. Check the card maker's recommended supply before you buy.</p>`, "pc-only")}
     </ol>
-    <aside class="shortlist" aria-labelledby="slh"><div class="sl-head"><h2 id="slh">Your shortlist</h2><p id="fsum" class="sub"></p></div><div id="fres" aria-live="polite"></div></aside>
+    <aside class="shortlist" aria-labelledby="slh"><div class="sl-head"><h2 id="slh">Your shortlist</h2><p id="fsum" class="sub"></p></div><div id="fres" aria-live="polite"></div><div class="sl-actions"><button type="button" class="btn" id="fshare">Copy link to these results</button><button type="button" class="btn ghost" id="freset">Start over</button></div></aside>
   </div>
   <div class="section finder-method"><h2>How the finder chooses</h2><ul class="facts">
     <li><b>Memory first.</b> We look for at least 8 GB for 1080p, 12 GB for 1440p and editing, and 16 GB for 4K and local AI. Cards with less are flagged, not hidden.</li>
@@ -432,8 +432,13 @@ function finderPage() {
   <script>
   (function(){
     var D=JSON.parse(document.getElementById("fdata").textContent), C={}; D.countries.forEach(function(c){C[c.c]=c;});
-    var st={use:"g1440",plat:"pc",brand:"any",cc:"US",bud:"",street:true,psu:""};
-    try{var h=new URLSearchParams(location.hash.slice(1));h.forEach(function(v,k){if(k in st)st[k]=(k==="street")?v!=="0":v;});}catch(e){}
+    var DEF={use:"g1440",plat:"pc",brand:"any",cc:"US",bud:"",street:true,psu:""}, st=Object.assign({},DEF);
+    // A shared link (#use=...) opens with its answers once; the hash is then cleared, so a refresh starts fresh.
+    try{if("scrollRestoration" in history)history.scrollRestoration="manual";
+      var nav=performance.getEntriesByType&&performance.getEntriesByType("navigation")[0];
+      if(location.hash.length>1&&!(nav&&nav.type==="reload")){new URLSearchParams(location.hash.slice(1)).forEach(function(v,k){if(k in st)st[k]=(k==="street")?v!=="0":v;});}
+      if(location.hash)history.replaceState(null,"",location.pathname+location.search);}catch(e){}
+    function shareUrl(){return location.origin+location.pathname+"#"+new URLSearchParams({use:st.use,plat:st.plat,brand:st.brand,cc:st.cc,bud:st.bud,street:st.street?"1":"0",psu:st.psu}).toString();}
     var $=function(id){return document.getElementById(id);};
     var NEED={g1080:8,g1440:12,g4k:16,create:12,ai:16}, USE={g1080:"1080p gaming",g1440:"1440p gaming",g4k:"4K gaming",create:"editing and 3D",ai:"local AI"};
     var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches, lastTop=null;
@@ -467,7 +472,6 @@ function finderPage() {
       r.style.setProperty("--fill",(r.value/mx*100)+"%");
       $("fbudout").textContent=st.bud?fmt(st.bud):"No limit";
       $("fcc").value=st.cc;if(document.activeElement!==$("fbud"))$("fbud").value=st.bud;$("fstreet").checked=st.street;$("fsym").textContent=C[st.cc].sym;
-      try{history.replaceState(null,"","#"+new URLSearchParams({use:st.use,plat:st.plat,brand:st.brand,cc:st.cc,bud:st.bud,street:st.street?"1":"0",psu:st.psu}).toString());}catch(e){}
       render();}
     function flash(){var t=document.querySelector(".pick.top");if(!t)return;var id=t.getAttribute("data-id");if(id!==lastTop&&lastTop!==null&&!reduce){t.classList.add("flash");}lastTop=id;}
     function render(){
@@ -503,6 +507,9 @@ function finderPage() {
     $("frange").addEventListener("input",function(){st.bud=Number(this.value)>=Number(this.max)?"":this.value;sync();});
     $("fbud").addEventListener("input",function(){st.bud=this.value;sync();});
     $("fstreet").addEventListener("change",function(){st.street=this.checked;sync();});
+    $("freset").addEventListener("click",function(){st=Object.assign({},DEF);lastTop=null;$("fbud").value="";sync();window.scrollTo({top:0,behavior:reduce?"auto":"smooth"});});
+    $("fshare").addEventListener("click",function(){var u=shareUrl(),b=this;function done(){b.textContent="Link copied";setTimeout(function(){b.textContent="Copy link to these results";},1800);}
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(u).then(done,function(){prompt("Copy this link:",u);});}else{prompt("Copy this link:",u);}});
     sync();
   })();
   </script>`;
