@@ -67,6 +67,17 @@
     });
   }
 
+  const SUF_DIR = (d) => d + SUF;
+  function recent() {
+    return LIST.filter((g) => /^\d{4}-\d{2}/.test(g.launch || "") && ["current", "announced"].includes(g.status) && g.launch <= new Date().toISOString().slice(0, 10))
+      .sort((a, b) => b.launch.localeCompare(a.launch)).filter((g, i, arr) => arr.findIndex((x) => x.series === g.series) === i).slice(0, 3);
+  }
+  function blurb(g) {
+    const first = (g.summary || "").split(/(?<=\.)\s/)[0];
+    if (first && first.length <= 110) return first;
+    const k = keyStats(g).slice(0, 2).map((x) => `${x.v}${x.u ? " " + x.u : ""} ${x.k.toLowerCase()}`);
+    return k.join(", ") + ".";
+  }
   function viewDatabase() {
     setTitle(""); setNav("database");
     const counts = { all: LIST.length };
@@ -74,17 +85,14 @@
     const archs = [...new Set(LIST.map((g) => g.arch))].sort();
 
     app.innerHTML = `
-      <div class="page-head">
-        <p class="eyebrow">Reference</p>
-        <h1>GPU database</h1>
-        <p class="lead">Specifications for current and recent NVIDIA, AMD, Intel and Apple GPUs and accelerators: desktop and laptop graphics, workstation cards, data-center accelerators, AI PCs and edge modules. Each model has its own spec sheet with variants, launch prices by country and sources.</p>
-        <div class="meta"><span>${LIST.length} products and configurations</span><span>Updated ${esc(D.updated)}</span><a href="#methodology">How this data is compiled</a></div>
+      <div class="home-hero">
+        <h1>Compare every GPU from NVIDIA, AMD, Intel and Apple</h1>
+        <p class="lead">Spec sheets checked against official sources, launch prices in ${D.COUNTRIES.length} countries next to today's street prices, and a finder that picks a card for your budget.</p>
+        <div class="home-actions"><a class="btn primary" href="${SUF_DIR("gpu-finder/")}">Find my GPU</a><a class="btn" href="#compare">Compare GPUs</a><a class="btn" href="${SUF_DIR("guides/")}">Buying guides</a></div>
+        <div class="home-meta"><span>${LIST.length} products</span><span>Updated ${esc(D.updated)}</span><a href="${SUF_DIR("about/")}">How this data is compiled</a></div>
       </div>
-      <div class="devs">
-        <a class="dev" href="${page("rtx-spark-n1x")}"><time>16 Oct 2026</time><p><strong>RTX Spark laptops ship.</strong> NVIDIA's first CPU-and-GPU chip for Windows PCs.</p></a>
-        <a class="dev" href="${page("vera-rubin-nvl72")}"><time>H2 2026</time><p><strong>Vera Rubin in production.</strong> 288 GB HBM4 at 22 TB/s per GPU.</p></a>
-        <a class="dev" href="${page("mi450x")}"><time>12 Nov 2026</time><p><strong>AMD Instinct MI450X announced.</strong> A 288 GB HBM4 option for Helios racks.</p></a>
-      </div>
+      <div class="recent"><h2>Recently launched</h2><div class="devs">${recent().map((g) => `<a class="dev" href="${page(g.id)}"><time>${esc(fmtDate(g.launch))}</time><p><strong>${esc(g.name)}.</strong> ${esc(blurb(g))}</p></a>`).join("")}</div></div>
+      <h2 class="db-title">GPU database</h2>
       <div class="tabs" role="tablist">
         ${["desktop", "laptop", "pro", "datacenter", "systems", "edge", "all"].map((k) => `<button class="tab" role="tab" data-seg="${k}" aria-selected="${state.seg === k}">${k === "all" ? "All" : esc(D.SEGMENTS[k])}<span class="count">${counts[k]}</span></button>`).join("")}
       </div>
@@ -365,6 +373,6 @@
   const csel = document.getElementById("country");
   csel.innerHTML = D.COUNTRIES.map((c) => `<option value="${c.code}" ${c.code === state.country ? "selected" : ""}>${c.cur} · ${esc(c.name)}</option>`).join("");
   csel.addEventListener("change", () => { state.country = csel.value; store.set("country", state.country); route(); });
-  document.getElementById("year").textContent = D.updated;
+  const yr = document.getElementById("year"); if (yr) yr.textContent = D.updated;
   route();
 })();

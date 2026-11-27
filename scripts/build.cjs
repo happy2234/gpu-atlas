@@ -48,9 +48,28 @@ const memText = (g) => { const m = g.specs.mem; if (m == null) return null; if (
 
 function hasOg(id) { return fs.existsSync(path.join(OUT, "og", `${id}.png`)); }
 
+
+// ---------- shared navigation and footer (static pages and the app shell use the same) ----------
+const NAV = (p, app = false) => [["Database", app ? "#database" : dir(p) || "./", "database"], ["GPU finder", dir(`${p}gpu-finder/`), "finder"], ["Compare", app ? "#compare" : `${dir(p)}#compare`, "compare"], ["Guides", dir(`${p}guides/`), "guides"], ["Architectures", dir(`${p}architectures/`), "architectures"], ["Glossary", dir(`${p}glossary/`), "glossary"], ["About", dir(`${p}about/`), "methodology"]];
+function footerHtml(p, app = false) {
+  const L = (href, text) => `<a href="${href}">${text}</a>`;
+  const g = (sl) => dir(`${p}guides/${sl}/`);
+  return `<footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="f-brand"><img class="brand-logo on-light" src="${p}assets/brand/logo-light.png" alt="GPU Atlas" width="152" height="28"><img class="brand-logo on-dark" src="${p}assets/brand/logo-dark.png" alt="" aria-hidden="true" width="151" height="28">
+        <p>Independent GPU reference: specifications from official sources, launch prices by country, and a finder that helps you choose.</p></div>
+      <div class="f-col"><h4>Explore</h4>${L(app ? "#database" : dir(p) || "./", "GPU database")}${L(dir(`${p}gpu-finder/`), "GPU finder")}${L(app ? "#compare" : `${dir(p)}#compare`, "Compare tool")}${L(dir(`${p}compare/`), "Head-to-heads")}</div>
+      <div class="f-col"><h4>Brands</h4>${BRANDS.map((b) => L(dir(`${p}brands/${brandSlug(b)}/`), b)).join("")}</div>
+      <div class="f-col"><h4>Guides</h4>${L(g("how-much-vram-do-i-need"), "How much VRAM?")}${L(g("vram-for-local-llms"), "VRAM for local AI")}${L(g("launch-price-vs-street-price-2026"), "Launch vs street prices")}${L(dir(`${p}guides/`), "All guides")}</div>
+      <div class="f-col"><h4>GPU Atlas</h4>${L(dir(`${p}about/`), "About")}${L(`mailto:${D.CONTACT}`, "Contact")}${L(dir(`${p}privacy/`), "Privacy")}${L(dir(`${p}terms/`), "Terms")}</div>
+    </div>
+    <div class="container footer-base"><span>© ${BUILD_DATE.slice(0, 4)} GPU Atlas · Data updated ${esc(D.updated)}</span><span>Not affiliated with NVIDIA, AMD, Intel or Apple. Product names are trademarks of their owners.</span></div>
+  </footer>`;
+}
+
 function layout({ title, desc, canonical, depth, body, og, jsonld, active }) {
   const p = up(depth);
-  const nav = [["Database", dir(p) || "./", "database"], ["Compare", `${dir(p)}#compare`, "compare"], ["GPU finder", dir(`${p}gpu-finder/`), "finder"], ["Guides", dir(`${p}guides/`), "guides"], ["Architectures", dir(`${p}architectures/`), "architectures"], ["Glossary", dir(`${p}glossary/`), "glossary"], ["About", dir(`${p}about/`), "methodology"]];
+  const nav = NAV(p);
   const ogImg = og ? `${SITE}/og/${og}.png` : `${SITE}/og/default.png`;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -74,9 +93,7 @@ function layout({ title, desc, canonical, depth, body, og, jsonld, active }) {
   <link rel="icon" type="image/png" sizes="32x32" href="${p}assets/brand/icon-32.png">
   <link rel="apple-touch-icon" href="${p}assets/brand/icon-180.png">
   <link rel="manifest" href="${p}assets/brand/site.webmanifest">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preload" href="${p}assets/fonts/schibsted-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="${p}assets/styles.css?v=${ASSET_V}">
   <script>try{var t=localStorage.getItem("gpuatlas:theme");t=t?JSON.parse(t):(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 ${jsonld ? `  <script type="application/ld+json">${JSON.stringify(jsonld).replace(/</g, "\\u003c")}</script>\n` : ""}</head>
@@ -84,19 +101,14 @@ ${jsonld ? `  <script type="application/ld+json">${JSON.stringify(jsonld).replac
   <header class="site-header">
     <div class="container">
       <a class="brand" href="${dir(p) || "./"}"><img class="brand-logo on-light" src="${p}assets/brand/logo-light.png" alt="GPU Atlas" width="163" height="30"><img class="brand-logo on-dark" src="${p}assets/brand/logo-dark.png" alt="" aria-hidden="true" width="162" height="30"><span class="brand-sub">NVIDIA, AMD, Intel &amp; Apple GPU reference</span></a>
-      <nav class="nav" aria-label="Main">${nav.map(([l, h, k]) => `<a href="${h}"${k === active ? ' aria-current="page"' : ""}>${l}</a>`).join("")}</nav>
+      <nav class="nav" aria-label="Main">${nav.map(([l, h, k]) => `<a href="${h}"${k === "finder" ? ' class="cta"' : ""}${k === active ? ' aria-current="page"' : ""}>${l}</a>`).join("")}</nav>
       <button class="icon-btn" id="themeBtn" type="button">Theme</button>
     </div>
   </header>
   <main><div class="container">
 ${body}
   </div></main>
-  <footer class="site-footer">
-    <div class="container">
-      <span>GPU Atlas is an independent reference and is not affiliated with NVIDIA, AMD, Intel or Apple. Product names are trademarks of their owners.</span>
-      <span>Data updated ${esc(D.updated)} · <a href="${dir(p + "about/")}">About</a> · <a href="mailto:${esc(D.CONTACT)}">Contact</a></span>
-    </div>
-  </footer>
+  ${footerHtml(p)}
   <script>
   (function(){
     var b=document.getElementById("themeBtn");
@@ -674,11 +686,15 @@ function indexHtml() {
 ${SUF ? `  <script>window.GPU_ATLAS_LINK_SUFFIX=${JSON.stringify(SUF)};</script>\n` : ""}`;
   html = html.replace("</head>", head + "</head>");
   html = html.replace(/(href|src)="assets\/([\w-]+\.(?:css|js))"/g, (m, a, f) => `${a}="assets/${f}?v=${ASSET_V}"`);
-  if (SUF) html = html.replace('href="guides/"', `href="guides/${SUF}"`).replace('href="gpu-finder/"', `href="gpu-finder/${SUF}"`);
-  // crawlable index of every spec sheet
-  const groups = BRANDS.map((b) => `<div><h3><a href="brands/${brandSlug(b)}/${SUF}">${b}</a></h3><p>${LIST.filter((g) => g.brand === b).map((g) => `<a href="gpu/${g.id}/${SUF}">${esc(g.name)}</a>`).join(" · ")}</p></div>`).join("");
-  const allIndex = `  <section class="container all-index" aria-label="All spec sheets"><h2>All spec sheets</h2>${groups}<p><a href="gpu-finder/${SUF}">GPU finder</a> · <a href="guides/${SUF}">Guides</a> · <a href="compare/${SUF}">Head-to-head comparisons</a> · <a href="architectures/${SUF}">Architectures</a> · <a href="glossary/${SUF}">Glossary</a> · <a href="about/${SUF}">About</a></p><h3>Series</h3><p>${SERIES.map((x) => `<a href="series/${x.slug}/${SUF}">${esc(x.brand === "Apple" ? "Apple " + x.series : x.series)}${x.seg === "laptop" && !/laptop/i.test(x.series) ? " laptop" : ""}</a>`).join(" · ")}</p></section>\n`;
+  html = html.replace(/<nav class="nav" aria-label="Main">[\s\S]*?<\/nav>/, `<nav class="nav" aria-label="Main">${NAV("", true).map(([l, h, k]) => `<a href="${h}"${k === "finder" ? ' class="cta"' : ""}${["database", "compare"].includes(k) ? ` data-route="${k}"` : ""}>${l}</a>`).join("")}</nav>`);
+  html = html.replace(/<footer class="site-footer">[\s\S]*?<\/footer>/, footerHtml("", true));
+  // crawlable directory: series by brand (visible), every spec sheet (collapsed)
+  const byBrand = BRANDS.map((b) => `<div><h3><a href="brands/${brandSlug(b)}/${SUF}">${b}</a></h3><div class="chips-list">${SERIES.filter((x) => x.brand === b).map((x) => `<a href="series/${x.slug}/${SUF}">${esc(x.brand === "Apple" ? x.series : x.series.replace(/^(NVIDIA|AMD|Intel) /, ""))}${x.seg === "laptop" && !/laptop/i.test(x.series) ? " laptop" : ""}</a>`).join("")}</div></div>`).join("");
+  const all = BRANDS.map((b) => `<p><b>${b}:</b> ${LIST.filter((g) => g.brand === b).map((g) => `<a href="gpu/${g.id}/${SUF}">${esc(g.name)}</a>`).join(" · ")}</p>`).join("");
+  const allIndex = `  <section class="container all-index" aria-label="Browse"><h2>Browse by brand and series</h2><p class="sub">Every family in the database, with links to each model's spec sheet.</p><div class="browse-grid">${byBrand}</div>
+    <details><summary>All ${LIST.length} spec sheets</summary>${all}</details></section>\n`;
   html = html.replace("  <div class=\"tray\"", allIndex + "  <div class=\"tray\"");
+  if (SUF) html = html.replace(/href="(guides|gpu-finder|architectures|glossary|about|compare|privacy|terms|brands\/[a-z]+)\/"/g, `href="$1/${SUF}"`);
   return html;
 }
 
@@ -819,6 +835,28 @@ function faqFor(g) {
   return q.slice(0, 5);
 }
 
+function legalPage(kind) {
+  const depth = 1;
+  const today = fmtDate(BUILD_DATE);
+  const privacy = `<div class="page-head"><h1>Privacy</h1><p class="lead">GPU Atlas doesn't have accounts, ads or analytics, and doesn't use tracking cookies.</p><div class="meta"><span>Last updated ${esc(today)}</span></div></div>
+    <div class="prose">
+    <h2>What's stored on your device</h2><p>Your browser keeps a few settings locally so the site remembers them: light or dark theme, the country for prices, your database filters and the cards in your compare list. They stay in your browser, aren't sent to us, and you can clear them by clearing site data. The GPU finder doesn't store your answers; a link you copy from it contains only the answers you chose.</p>
+    <h2>Hosting</h2><p>The site is hosted on GitHub Pages. Like any web host, GitHub receives your IP address and browser details when you load a page, under <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">GitHub's privacy statement</a>. Fonts and images are served from this site, not from third parties.</p>
+    <h2>Email</h2><p>If you email <a href="mailto:${esc(D.CONTACT)}">${esc(D.CONTACT)}</a>, for example to report an error, we use your message and address only to reply and to fix the site. We don't add you to a mailing list.</p>
+    <h2>Links to other sites</h2><p>Spec sheets link to manufacturers, reviews and price trackers. Those sites have their own privacy policies.</p>
+    <h2>Changes</h2><p>If this changes, for example if analytics or affiliate links are added, this page will say so and show a new date.</p></div>`;
+  const terms = `<div class="page-head"><h1>Terms of use</h1><p class="lead">GPU Atlas is a free reference. Please read the information on it with these terms in mind.</p><div class="meta"><span>Last updated ${esc(today)}</span></div></div>
+    <div class="prose">
+    <h2>Information only</h2><p>Specifications, prices and recommendations are provided for general information. We check figures against the sources listed on each page, but mistakes and changes happen. Before you buy, confirm details with the manufacturer or retailer.</p>
+    <h2>Prices</h2><p>Launch prices are official prices at release. Street prices are dated snapshots from named sources and change often. GPU Atlas doesn't sell anything and isn't responsible for prices or offers on other sites.</p>
+    <h2>Recommendations</h2><p>The GPU finder ranks cards using the rules explained on its page. It's a starting point, not professional advice; read independent reviews before deciding.</p>
+    <h2>Trademarks</h2><p>NVIDIA, GeForce, AMD, Radeon, Intel, Arc, Apple and other product names are trademarks of their owners. GPU Atlas is independent and not affiliated with or endorsed by them.</p>
+    <h2>Using our content</h2><p>You're welcome to quote and link to GPU Atlas with a credit and a link to the page. Please don't copy the site or its data in bulk without asking.</p>
+    <h2>No warranty</h2><p>The site is provided as is, without warranties. To the extent the law allows, GPU Atlas isn't liable for losses from using it.</p>
+    <h2>Contact</h2><p>Questions or corrections: <a href="mailto:${esc(D.CONTACT)}">${esc(D.CONTACT)}</a>.</p></div>`;
+  return layout({ title: kind === "privacy" ? "Privacy — GPU Atlas" : "Terms of use — GPU Atlas", desc: kind === "privacy" ? "How GPU Atlas handles data: no accounts, ads, analytics or tracking cookies." : "Terms for using GPU Atlas, a free GPU reference.", canonical: `${SITE}/${kind}/`, depth, body: kind === "privacy" ? privacy : terms, og: null, active: "" });
+}
+
 // ---------- build ----------
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
@@ -841,6 +879,8 @@ for (const a of ARCH_LIST) write(`architectures/${a.slug}/index.html`, archPage(
 for (const x of SERIES) write(`series/${x.slug}/index.html`, seriesPage(x));
 write("glossary/index.html", glossaryPage());
 write("about/index.html", aboutPage());
+write("privacy/index.html", legalPage("privacy"));
+write("terms/index.html", legalPage("terms"));
 write(`${INDEXNOW_KEY}.txt`, INDEXNOW_KEY);
 for (const gd of GUIDES) write(`guides/${gd.slug}/index.html`, guidePage(gd));
 write("404.html", layout({ title: "Page not found — GPU Atlas", desc: "This page does not exist.", canonical: `${SITE}/`, depth: 0, body: `<div class="page-head"><h1>Page not found</h1><p class="lead">That page doesn't exist. Try the <a href="${SITE}/">GPU database</a> or the <a href="${SITE}/guides/">guides</a>.</p></div>`, active: "" })
@@ -859,6 +899,8 @@ const urls = [
   ...SERIES.map((x) => ({ loc: `${SITE}/series/${x.slug}/`, lastmod: BUILD_DATE, pr: "0.7" })),
   { loc: `${SITE}/glossary/`, lastmod: BUILD_DATE, pr: "0.5" },
   { loc: `${SITE}/about/`, lastmod: BUILD_DATE, pr: "0.5" },
+  { loc: `${SITE}/privacy/`, lastmod: BUILD_DATE, pr: "0.2" },
+  { loc: `${SITE}/terms/`, lastmod: BUILD_DATE, pr: "0.2" },
   ...LIST.map((g) => ({ loc: gpuUrl(g.id), lastmod: g.checked || BUILD_DATE, pr: g.status === "current" ? "0.9" : "0.6" }))
 ];
 write("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${xml(u.loc)}</loc><lastmod>${u.lastmod}</lastmod><priority>${u.pr}</priority></url>`).join("\n")}\n</urlset>\n`);
