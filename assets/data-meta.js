@@ -27,6 +27,7 @@
     "p-5050-eu": { t: "Notebookcheck — RTX 5050 German RRP €259", u: "https://www.notebookcheck.net/Nvidia-confirms-overpriced-GeForce-RTX-5050-for-the-EU.1046386.0.html" },
     "p-9060xt-uk": { t: "OC3D — RX 9060 XT UK MSRPs", u: "https://overclock3d.net/news/gpu-displays/is-amds-msrp-real-amd-rx-9060-xt-pricing-rundown/" },
     "s-pcg": { t: "PC Gamer — Graphics card price watch (retrieved 21 Nov 2026)", u: "https://www.pcgamer.com/cheap-graphics-card-deals-today-uk" },
+    "s-pcg-bf": { t: "PC Gamer — Black Friday graphics card deals, best GPU prices in the US and UK (retrieved 27 Nov 2026)", u: "https://www.pcgamer.com/black-friday-graphics-card-deals/" },
     "s-th": { t: "Tech Insider — Tom's Hardware GPU price tracker snapshot (3 Nov 2026)", u: "https://tech-insider.org/?p=52610" },
     "s-au": { t: "Glukhov — RTX 5090 and 5080 prices in Australia (29 Oct 2026)", u: "https://www.glukhov.org/ko/hardware/gpu/rtx-5090-price-australia/" },
     "s-ca": { t: "GPU Prix — RTX 5090 price history in Canada (22 Oct 2026)", u: "https://gpuprix.com/gpus/geforce-rtx-5090?show=listings" },
@@ -102,20 +103,20 @@
   // ---------- Reported street prices (dated snapshots) ----------
   // Lowest new-card price reported by the named source on the given date. Not live.
   const S = {
-    "rtx-5090": [["US", 6919, "2026-11-03", "s-th", "Best US price"], ["AU", 12249, "2026-10-29", "s-au", "Average of cheapest in-stock listings"], ["CA", 10101, "2026-10-22", "s-ca", "Lowest tracked listing"], ["JP", 999800, "2026-11-15", "s-jp", "Akihabara listing, mid-November"]],
-    "rtx-5080": [["US", 1550, "2026-11-21", "s-pcg"], ["AU", 2832, "2026-10-29", "s-au", "Average of cheapest in-stock listings"]],
-    "rtx-5070-ti": [["US", 1150, "2026-11-21", "s-pcg"]],
-    "rtx-5070": [["US", 800, "2026-11-21", "s-pcg"]],
-    "rtx-5060-ti": [["US", 773, "2026-11-21", "s-pcg", "16 GB"]],
-    "rtx-5060": [["US", 359, "2026-11-21", "s-pcg"]],
-    "rtx-5050": [["US", 299, "2026-11-21", "s-pcg"]],
-    "rx-9070-xt": [["US", 730, "2026-11-21", "s-pcg"]],
-    "rx-9070": [["US", 630, "2026-11-21", "s-pcg"]],
-    "rx-9070-gre": [["US", 530, "2026-11-21", "s-pcg"]],
-    "rx-9060-xt": [["US", 460, "2026-11-21", "s-pcg", "16 GB"]],
+    "rtx-5090": [["US", 6800, "2026-11-26", "s-pcg-bf"], ["AU", 12249, "2026-10-29", "s-au", "Average of cheapest in-stock listings"], ["CA", 10101, "2026-10-22", "s-ca", "Lowest tracked listing"], ["JP", 999800, "2026-11-15", "s-jp", "Akihabara listing, mid-November"]],
+    "rtx-5080": [["US", 1950, "2026-11-26", "s-pcg-bf"], ["GB", 1515, "2026-11-26", "s-pcg-bf"], ["AU", 2832, "2026-10-29", "s-au", "Average of cheapest in-stock listings"]],
+    "rtx-5070-ti": [["US", 1400, "2026-11-26", "s-pcg-bf"], ["GB", 1250, "2026-11-26", "s-pcg-bf"]],
+    "rtx-5070": [["US", 900, "2026-11-26", "s-pcg-bf"], ["GB", 750, "2026-11-26", "s-pcg-bf"]],
+    "rtx-5060-ti": [["US", 780, "2026-11-26", "s-pcg-bf", "16 GB"], ["GB", 660, "2026-11-26", "s-pcg-bf", "16 GB"]],
+    "rtx-5060": [["US", 440, "2026-11-26", "s-pcg-bf"], ["GB", 425, "2026-11-26", "s-pcg-bf"]],
+    "rtx-5050": [["US", 399, "2026-11-26", "s-pcg-bf"], ["GB", 370, "2026-11-26", "s-pcg-bf"]],
+    "rx-9070-xt": [["US", 960, "2026-11-26", "s-pcg-bf"], ["GB", 860, "2026-11-26", "s-pcg-bf"]],
+    "rx-9070": [["US", 723, "2026-11-26", "s-pcg-bf"], ["GB", 750, "2026-11-26", "s-pcg-bf"]],
+    "rx-9070-gre": [["US", 619, "2026-11-26", "s-pcg-bf"], ["GB", 620, "2026-11-26", "s-pcg-bf"]],
+    "rx-9060-xt": [["US", 710, "2026-11-26", "s-pcg-bf", "16 GB"], ["GB", 600, "2026-11-26", "s-pcg-bf", "16 GB"]],
     "rx-7600": [["US", 389, "2026-11-03", "s-th"]],
-    "arc-b580": [["US", 310, "2026-11-21", "s-pcg"]],
-    "arc-b570": [["US", 260, "2026-11-21", "s-pcg"]]
+    "arc-b580": [["US", 310, "2026-11-21", "s-pcg"], ["GB", 500, "2026-11-26", "s-pcg-bf"]],
+    "arc-b570": [["US", 280, "2026-11-26", "s-pcg-bf"], ["GB", 300, "2026-11-26", "s-pcg-bf"]]
   };
   Object.entries(S).forEach(([id, rows]) => {
     const g = byId(id); if (!g) return;
@@ -245,7 +246,7 @@
   };
   Object.entries(REVIEWS).forEach(([id, list]) => edit(id, (g) => { g.reviews = list; }));
 
-  D.updated = "21 November 2026";
+  D.updated = "27 November 2026";
   D.REPO = "https://github.com/happy2234/gpu-atlas";
   D.CONTACT = "gaurav@gpuatlas.in";
 })();
