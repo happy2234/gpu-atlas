@@ -423,11 +423,11 @@ function finderPage() {
       ${step(1, "What will you use it for?", `<div class="opts" data-k="use">${tile("g1080", "1080p gaming", "High frame rates on a Full HD monitor")}${tile("g1440", "1440p gaming", "The sweet spot for most players")}${tile("g4k", "4K gaming", "Maximum detail on a big screen")}${tile("create", "Editing &amp; 3D", "Video, photo and 3D rendering")}${tile("ai", "Local AI", "Running LLMs and image models yourself")}</div>`)}
       ${step(2, "Which computer is it for?", `<div class="opts two" data-k="plat">${tile("pc", "Windows or Linux PC", "You'll buy a graphics card")}${tile("mac", "Mac", "The GPU comes with the chip you choose")}</div>`)}
       ${step(3, "How much can you spend?", `<div class="fbudget">
-          <div class="fbudget-top"><select id="fcc" aria-label="Country">${countries.map((c) => `<option value="${c.c}">${esc(c.n)}</option>`).join("")}</select>
+          <div class="fbudget-top"><select id="fcc" aria-label="Country" autocomplete="off">${countries.map((c) => `<option value="${c.c}">${esc(c.n)}</option>`).join("")}</select>
             <output id="fbudout" for="frange" class="fbudget-out">No limit</output></div>
-          <input id="frange" type="range" min="0" step="10" aria-label="Budget">
-          <div class="fbudget-foot"><span id="ffit" class="sub"></span><label class="sub exact">Exact amount <span class="money-in"><span id="fsym">$</span><input id="fbud" type="number" min="0" inputmode="numeric" placeholder="Any"></span></label></div>
-          <label class="check"><input type="checkbox" id="fstreet" checked> Compare with today's street price where we have one</label></div>`, "pc-only")}
+          <input id="frange" type="range" min="0" step="10" aria-label="Budget" autocomplete="off">
+          <div class="fbudget-foot"><span id="ffit" class="sub"></span><label class="sub exact">Exact amount <span class="money-in"><span id="fsym">$</span><input id="fbud" type="number" min="0" inputmode="numeric" placeholder="Any" autocomplete="off"></span></label></div>
+          <label class="check"><input type="checkbox" id="fstreet" checked autocomplete="off"> Compare with today's street price where we have one</label></div>`, "pc-only")}
       ${step(4, "Any brand preference?", `<div class="seg" data-k="brand"><button type="button" data-v="any">No preference</button><button type="button" data-v="NVIDIA">NVIDIA</button><button type="button" data-v="AMD">AMD</button><button type="button" data-v="Intel">Intel</button></div>`, "pc-only")}
       ${step(5, "What power supply do you have?", `<div class="seg" data-k="psu"><button type="button" data-v="">Not sure</button>${[450, 550, 650, 750, 850, 1000].map((w) => `<button type="button" data-v="${w}">${w} W</button>`).join("")}</div>
           <p class="sub hint">We allow about 250 W for the rest of the PC. Check the card maker's recommended supply before you buy.</p>`, "pc-only")}
@@ -519,7 +519,12 @@ function finderPage() {
     $("frange").addEventListener("input",function(){st.bud=Number(this.value)>=Number(this.max)?"":this.value;sync();});
     $("fbud").addEventListener("input",function(){st.bud=this.value;sync();});
     $("fstreet").addEventListener("change",function(){st.street=this.checked;sync();});
-    $("freset").addEventListener("click",function(){st=Object.assign({},DEF);lastTop=null;$("fbud").value="";sync();window.scrollTo({top:0,behavior:reduce?"auto":"smooth"});});
+    function resetAll(smooth){st=Object.assign({},DEF);lastTop=null;$("fbud").value="";sync();window.scrollTo({top:0,behavior:smooth&&!reduce?"smooth":"auto"});}
+    $("freset").addEventListener("click",function(){resetAll(true);});
+    // Coming back to the page (back/forward cache, or a restored tab) also starts fresh
+    window.addEventListener("pageshow",function(e){if(e.persisted)resetAll(false);});
+    // Clicking "GPU finder" in the menu while already on this page starts over too
+    document.querySelectorAll('.nav a.cta').forEach(function(a){a.addEventListener("click",function(e){var norm=function(x){return x.replace(/index\.html$/,"");};if(norm(a.pathname)===norm(location.pathname)){e.preventDefault();resetAll(true);}});});
     $("fshare").addEventListener("click",function(){var u=shareUrl(),b=this;function done(){b.textContent="Link copied";setTimeout(function(){b.textContent="Copy link to these results";},1800);}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(u).then(done,function(){prompt("Copy this link:",u);});}else{prompt("Copy this link:",u);}});
     sync();
